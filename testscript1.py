@@ -17,6 +17,7 @@ import random
 import time
 import numpy as np
 import cv2
+import pygame
 
 IM_WIDTH = 640
 IM_HEIGHT = 480
@@ -36,6 +37,24 @@ def process_ods(event):
         dist = event.distance
         print("distance from the front car is" + str(dist))
         return dist
+#https://github.com/copotron/sdv-course/blob/master/lesson0/camera.py   
+def process_img2(disp, image):
+    #image.save_to_disk('output/%05d.png' % image.frame, 
+    #   carla.ColorConverter.Raw)
+    org_array = np.frombuffer(image.raw_data, dtype=np.dtype('uint8'))
+    array = np.reshape(org_array, (image.height, image.width, 4))
+    array = array[:, :, :3]
+    array = array[:,:,::-1]
+    array = array.swapaxes(0,1)
+    surface = pygame.surfarray.make_surface(array)
+
+    disp.blit(surface, (200,0))
+    pygame.display.flip()
+
+display = pygame.display.set_mode(
+        (1200, 600),
+        pygame.HWSURFACE | pygame.DOUBLEBUF
+    )
 
 def game_loop():
     """ Main loop for agent"""
@@ -73,16 +92,18 @@ def game_loop():
         # get the blueprint for this sensor
         blueprint = world.get_blueprint_library().find('sensor.camera.rgb')
         # change the dimensions of the image
-        blueprint.set_attribute('image_size_x', f'{IM_WIDTH}')
-        blueprint.set_attribute('image_size_y', f'{IM_HEIGHT}')
-        blueprint.set_attribute('fov', '110')
+        #blueprint.set_attribute('image_size_x', f'{IM_WIDTH}')
+        #blueprint.set_attribute('image_size_y', f'{IM_HEIGHT}')
+        #blueprint.set_attribute('fov', '110')
         # Adjust sensor relative to vehicle
         spawn_point = carla.Transform(carla.Location(x=2.5, z=0.7))
 
         #spawn the sensor and attach to vehicle.
-        sensor = world.spawn_actor(blueprint, spawn_point, attach_to=vehicle)
+        sensor = world.spawn_actor(blueprint, spawn_point, attach_to=vehicle,attachment_type=carla.AttachmentType.Rigid)
         actor_list.append(sensor)
-        sensor.listen(lambda data: process_img(data))
+        #sensor.listen(lambda data: process_img(data))
+        sensor.listen(lambda data: process_img2(display,data))
+        
         
         #add object detecion sensor
         blueprint_ods = world.get_blueprint_library().find('sensor.other.obstacle')
@@ -107,7 +128,7 @@ def game_loop():
             actor.destroy()
         print('done.')
 
-        #pygame.quit()
+        pygame.quit()
         
 def main():
      try:
