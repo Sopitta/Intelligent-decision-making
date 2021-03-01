@@ -3,6 +3,7 @@ import glob
 import os
 import sys
 import random
+import time
 
 try:
     #sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
@@ -58,8 +59,7 @@ def spawn_driving_vehicle(client, world):
     vehicle_id = client.apply_batch_sync(batch)[0].actor_id
 
     # Find the vehicle and return the carla.Actor instance.
-    time.sleep(
-        0.5)  # This is so that the vehicle gets registered in the actors.
+    time.sleep(0.5)  # This is so that the vehicle gets registered in the actors.
     return world.get_actors().find(vehicle_id)
 
 
