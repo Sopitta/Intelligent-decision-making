@@ -1,9 +1,10 @@
-#modified from https://github.com/Sentdex/Carla-RL
 import glob
 import os
 import sys
 import random
 import time
+import numpy as np
+import pygame
 
 try:
     #sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
@@ -24,6 +25,24 @@ def process_ods(event):
         dist = event.distance
         print("distance from the front car is" + str(dist))
         return dist
+    
+#https://github.com/copotron/sdv-course/blob/master/lesson0/camera.py   
+def process_img(disp, image):
+    #image.save_to_disk('output/%05d.png' % image.frame, 
+    #   carla.ColorConverter.Raw)
+    org_array = np.frombuffer(image.raw_data, dtype=np.dtype('uint8'))
+    array = np.reshape(org_array, (image.height, image.width, 4))
+    array = array[:, :, :3]
+    array = array[:,:,::-1]
+    array = array.swapaxes(0,1)
+    surface = pygame.surfarray.make_surface(array)
+    disp.blit(surface, (200,0))
+    pygame.display.flip()
+
+display = pygame.display.set_mode(
+        (1200, 600),
+        pygame.HWSURFACE | pygame.DOUBLEBUF
+    )
 
 
 #https://www.programcreek.com/python/?code=erdos-project%2Fpylot%2Fpylot-master%2Fscripts%2Ftest_canny_lane_detection.py
@@ -81,17 +100,38 @@ class CarEnv:
         self.actor_list.append(self.player)
          
         #spawn a rgb camera attached to the player.
+        self.blueprint_cam = self.blueprint_library.find('sensor.camera.rgb')
+        self.cam_transform = carla.Transform(carla.Location(x=2.5, z=0.7))
+
+        #spawn the sensor and attach to vehicle.
+        self.rgb_cam = self.world.spawn_actor(self.blueprint_cam, self.cam_transform, attach_to=self.player,attachment_type=carla.AttachmentType.Rigid)
+        self.actor_list.append(self.rgb_cam)
+        #sensor.listen(lambda data: process_img(data))
+        self.rgb_cam.listen(lambda data: process_img(display,data))
          
         #spawn an object detection sensor attached to the player.
-        blueprint_ods = self.blueprint_library.find('sensor.other.obstacle')
-        blueprint_ods.set_attribute('only_dynamics', 'TRUE')
-        blueprint_ods.set_attribute('debug_linetrace', 'TRUE')
+        self.blueprint_ods = self.blueprint_library.find('sensor.other.obstacle')
+        self.blueprint_ods.set_attribute('only_dynamics', 'TRUE')
+        self.blueprint_ods.set_attribute('debug_linetrace', 'TRUE')
         self.ods_transform = carla.Transform(carla.Location(x=1.6, z=1.7), carla.Rotation(yaw=0)) # Put this sensor on the windshield of the car.
         self.ods_sensor = self.world.spawn_actor(self.blueprint_ods, self.ods_transform, attach_to=self.player)
         self.actor_list.append(self.ods_sensor)
         self.ods_sensor.listen(lambda event: process_ods(event))
         
         #spawn other vehicles.
+        self.player.apply_control(carla.VehicleControl(throttle=1.0, steer=-1.0))
+        self.player.set_autopilot(True)
+        time.sleep(60)
+        
+        print('destroying actors')
+        for actor in self.actor_list:
+            actor.destroy()
+        print('done.')
+
+        pygame.quit()
+        
+    
+        
         
          
          

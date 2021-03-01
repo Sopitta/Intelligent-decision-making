@@ -37,6 +37,7 @@ def process_ods(event):
         dist = event.distance
         print("distance from the front car is" + str(dist))
         return dist
+    
 #https://github.com/copotron/sdv-course/blob/master/lesson0/camera.py   
 def process_img2(disp, image):
     #image.save_to_disk('output/%05d.png' % image.frame, 
@@ -110,7 +111,7 @@ def game_loop():
         blueprint_ods.set_attribute('only_dynamics', 'TRUE')
         blueprint_ods.set_attribute('debug_linetrace', 'TRUE')
         ods_transform = carla.Transform(carla.Location(x=1.6, z=1.7), carla.Rotation(yaw=0)) # Put this sensor on the windshield of the car.
-        ods_sensor = world.spawn_actor(blueprint_ods, ods_transform, attach_to=vehicle)
+        ods_sensor = world.spawn_actor(blueprint_ods, ods_transform, attach_to=vehicle,attachment_type=carla.AttachmentType.Rigid)
         actor_list.append(ods_sensor)
         ods_sensor.listen(lambda event: process_ods(event))
         
@@ -118,7 +119,7 @@ def game_loop():
         vehicle.set_autopilot(True)
         #vehicle.set_light_state(self._lights)
         
-        time.sleep(25)
+        time.sleep(120)
         
     finally:
         #if world is not None:
