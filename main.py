@@ -18,7 +18,17 @@ except IndexError:
 
 import carla
 from env import CarEnv
+from agent.myagent import Agent
 
-env = CarEnv()
-env.reset()
+
+try:
+    env = CarEnv()
+    env.reset()
+    agent = Agent(env.player)
+    
+finally:
+    pass
+    
+
+
 

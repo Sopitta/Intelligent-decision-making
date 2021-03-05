@@ -28,8 +28,7 @@ def process_ods(event):
     
 #https://github.com/copotron/sdv-course/blob/master/lesson0/camera.py   
 def process_img(disp, image):
-    #image.save_to_disk('output/%05d.png' % image.frame, 
-    #   carla.ColorConverter.Raw)
+    
     org_array = np.frombuffer(image.raw_data, dtype=np.dtype('uint8'))
     array = np.reshape(org_array, (image.height, image.width, 4))
     array = array[:, :, :3]
@@ -89,6 +88,7 @@ class CarEnv:
         self.world = self.client.get_world()
         self.blueprint_library = self.world.get_blueprint_library()
         self.model_3 = self.blueprint_library.filter("model3")[0]
+        self.player = None
      
     def reset(self):
         
