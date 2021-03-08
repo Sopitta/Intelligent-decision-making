@@ -32,13 +32,12 @@ def game_loop():
         env = CarEnv()
         agent = Agent(env.player)
         while True:
-            ahead_dist = env
+            dist = env.ods_sensor.ahead_dist
             control = agent.run_step()
             #print(control)
             env.player.apply_control(control)
     finally:
         if  env is not None:
-            print('im here')
             env.destroy()
         pygame.quit()
 
