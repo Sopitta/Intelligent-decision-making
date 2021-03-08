@@ -121,6 +121,8 @@ class CarEnv:
         self.actor_list.append(self.ods_sensor)
         self.adist = self.ods_sensor.listen(lambda event: process_ods(event))
         
+        
+        
         #spawn other vehicles.
         #self.player.apply_control(carla.VehicleControl(throttle=1.0, steer=-1.0))
         #self.player.set_autopilot(True)
@@ -138,7 +140,7 @@ class CarEnv:
  
     
 # ==============================================================================
-# -- CollisionSensor -----------------------------------------------------------
+# -- ObjectDetectionSensor -----------------------------------------------------------
 # ==============================================================================   
             
 class ObjectDetectionSensor(object):
@@ -164,6 +166,34 @@ class ObjectDetectionSensor(object):
              print("distance from the front car is" + str(dist))
              self.ahead_dist = dist
              
+# ==============================================================================
+# -- RGBCamera -----------------------------------------------------------
+# ==============================================================================   
+             
+class RGBCamera(object):
+     def __init__(self, parent_actor):
+         self.sensor = None
+         self.parent = parent_actor
+         world = self.parent.get_world()
+         bp = world.get_blueprint_library().find('sensor.camera.rgb')
+         transform = carla.Transform(carla.Location(x=2.5, z=0.7))
+         self.sensor = world.spawn_actor(bp, transform, attach_to=self.parent,attachment_type=carla.AttachmentType.Rigid)
+         weak_self = weakref.ref(self)
+         self.sensor.listen(lambda data: RGBCamera.process_img(weak_self, data))
+         
+     @staticmethod
+     def process_img(weak_self,image):
+         self = weak_self()
+          if not self:
+            return
+          org_array = np.frombuffer(image.raw_data, dtype=np.dtype('uint8'))
+          array = np.reshape(org_array, (image.height, image.width, 4))
+          array = array[:, :, :3]
+          array = array[:,:,::-1]
+          array = array.swapaxes(0,1)
+          surface = pygame.surfarray.make_surface(array)
+          disp.blit(surface, (200,0))
+          pygame.display.flip()
 
         
          
