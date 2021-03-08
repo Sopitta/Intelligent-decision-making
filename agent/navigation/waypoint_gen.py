@@ -1,8 +1,25 @@
+import glob
+import os
+import sys
+try:
+    #sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
+    sys.path.append(glob.glob('D:/self-driving cars/simulator/CARLA_0.9.10.1/WindowsNoEditor/PythonAPI/carla/dist/carla-*%d.%d-%s.egg' % (
+     #sys.path.append(glob.glob('Z:/Documents/Carla/CARLA_0.9.10/WindowsNoEditor/PythonAPI/carla/dist/carla-*%d.%d-%s.egg' % (
+        sys.version_info.major,
+        sys.version_info.minor,
+        'win-amd64' if os.name == 'nt' else 'linux-x86_64'))[0])
+except IndexError:
+    pass
 
 from enum import Enum
 from collections import deque
 import random
-from navigation.controller import VehiclePIDController
+
+sys.path.insert(1, 'D:/Master thesis/agent/navigation/controller')
+sys.path.insert(1, 'D:/Master thesis')
+from PIDcontroller import VehiclePIDController
+from env import CarEnv
+#from navigation.controller import VehiclePIDController
 
 import carla
 
@@ -23,7 +40,10 @@ class RoadOption(Enum):
 
 
 class WaypointGen(object):
-    def __init__(self, vehicle):
+    
+    MIN_DISTANCE_PERCENTAGE = 0.9
+    
+    def __init__(self, vehicle,opt_dict):
         self._vehicle = vehicle
         self._map = self._vehicle.get_world().get_map()
 
@@ -41,6 +61,7 @@ class WaypointGen(object):
         self._waypoints_queue = deque(maxlen=20000)
         self._buffer_size = 5
         self._waypoint_buffer = deque(maxlen=self._buffer_size)
+        self.carenv = CarEnv()
 
         # initializing controller
         self._init_controller(opt_dict)
@@ -54,7 +75,7 @@ class WaypointGen(object):
         self._vehicle = None
         print("Resetting ego-vehicle!")
         
-    def _init_controller(self,targetspeed):
+    def _init_controller(self,opt_dict):
         """
         Controller initialization.
 
@@ -62,8 +83,10 @@ class WaypointGen(object):
         :return:
         """
         # default params
-        self._dt = 1.0 / 20.0
-        self._target_speed = 20.0  # Km/h
+        self._target_speed = opt_dict['target_speed']
+        self._dt = 1.0 / self._target_speed
+        #self._dt = 1.0 / 20.0
+        #self._target_speed = 20.0  # Km/h
         self._sampling_radius = self._target_speed * 1 / 3.6  # 1 seconds horizon
         self._min_distance = self._sampling_radius * self.MIN_DISTANCE_PERCENTAGE
         self._max_brake = 0.3
@@ -81,7 +104,7 @@ class WaypointGen(object):
             'dt': self._dt}
 
         # parameters overload
-        self._target_speed = targetspeed
+        #self._target_speed = opt_dict['target_speed']
        
         self._current_waypoint = self._map.get_waypoint(self._vehicle.get_location())
         self._vehicle_controller = VehiclePIDController(self._vehicle,
@@ -127,7 +150,10 @@ class WaypointGen(object):
             # element 0 is waypoint, 1 is road.option
             last_waypoint = self._waypoints_queue[-1][0]
             next_waypoints = list(last_waypoint.next(self._sampling_radius))
-
+            
+            #self.carenv.adist != None:
+            #print(self.carenv.adist)
+            
             if len(next_waypoints) == 0:
                 break
             elif len(next_waypoints) == 1:
@@ -187,6 +213,8 @@ class WaypointGen(object):
         # target waypoint
         self.target_waypoint, self._target_road_option = self._waypoint_buffer[0]
         # move using PID controllers
+        #print(self._target_speed)
+        #print(self.target_waypoint)
         control = self._vehicle_controller.run_step(self._target_speed, self.target_waypoint)
 
         # purge the queue of obsolete waypoints

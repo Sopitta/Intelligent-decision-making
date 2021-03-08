@@ -8,8 +8,8 @@ import pygame
 
 try:
     #sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
-    #sys.path.append(glob.glob('D:/self-driving cars/simulator/CARLA_0.9.10.1/WindowsNoEditor/PythonAPI/carla/dist/carla-*%d.%d-%s.egg' % (
-     sys.path.append(glob.glob('Z:/Documents/Carla/CARLA_0.9.10/WindowsNoEditor/PythonAPI/carla/dist/carla-*%d.%d-%s.egg' % (
+    sys.path.append(glob.glob('D:/self-driving cars/simulator/CARLA_0.9.10.1/WindowsNoEditor/PythonAPI/carla/dist/carla-*%d.%d-%s.egg' % (
+    #sys.path.append(glob.glob('Z:/Documents/Carla/CARLA_0.9.10/WindowsNoEditor/PythonAPI/carla/dist/carla-*%d.%d-%s.egg' % (
         sys.version_info.major,
         sys.version_info.minor,
         'win-amd64' if os.name == 'nt' else 'linux-x86_64'))[0])
@@ -86,10 +86,12 @@ class CarEnv:
         self.client = carla.Client("localhost", 2000)
         self.client.set_timeout(10.0)
         self.world = self.client.get_world()
+        #self.world = self.client.load_world('Town01')
         self.blueprint_library = self.world.get_blueprint_library()
         self.model_3 = self.blueprint_library.filter("model3")[0]
         self.player = None
-     
+        self.adist = None
+        
     def reset(self):
         
         self.actor_list = []
@@ -116,19 +118,25 @@ class CarEnv:
         self.ods_transform = carla.Transform(carla.Location(x=1.6, z=1.7), carla.Rotation(yaw=0)) # Put this sensor on the windshield of the car.
         self.ods_sensor = self.world.spawn_actor(self.blueprint_ods, self.ods_transform, attach_to=self.player)
         self.actor_list.append(self.ods_sensor)
-        self.ods_sensor.listen(lambda event: process_ods(event))
+        self.adist = self.ods_sensor.listen(lambda event: process_ods(event))
         
         #spawn other vehicles.
-        self.player.apply_control(carla.VehicleControl(throttle=1.0, steer=-1.0))
-        self.player.set_autopilot(True)
-        time.sleep(60)
+        #self.player.apply_control(carla.VehicleControl(throttle=1.0, steer=-1.0))
+        #self.player.set_autopilot(True)
+        #time.sleep(60)
         
-        print('destroying actors')
+        #print('destroying actors')
+        #for actor in self.actor_list:
+        #    actor.destroy()
+        #print('done.')
+
+        #pygame.quit()
+    def destroy(self):
         for actor in self.actor_list:
             actor.destroy()
-        print('done.')
-
-        pygame.quit()
+ 
+#create sensors object    
+        
         
     
         

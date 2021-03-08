@@ -6,6 +6,19 @@
 
 """ This module contains PID controllers to perform lateral and longitudinal control. """
 
+import glob
+import os
+import sys
+try:
+    #sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
+    sys.path.append(glob.glob('D:/self-driving cars/simulator/CARLA_0.9.10.1/WindowsNoEditor/PythonAPI/carla/dist/carla-*%d.%d-%s.egg' % (
+     #sys.path.append(glob.glob('Z:/Documents/Carla/CARLA_0.9.10/WindowsNoEditor/PythonAPI/carla/dist/carla-*%d.%d-%s.egg' % (
+        sys.version_info.major,
+        sys.version_info.minor,
+        'win-amd64' if os.name == 'nt' else 'linux-x86_64'))[0])
+except IndexError:
+    pass
+
 from collections import deque
 import math
 import numpy as np
@@ -135,7 +148,8 @@ class PIDLongitudinalController():
             :param current_speed: current speed of the vehicle in Km/h
             :return: throttle/brake control
         """
-
+        #print(target_speed)
+        #print(current_speed)
         error = target_speed - current_speed
         self._error_buffer.append(error)
 

@@ -8,8 +8,8 @@ import pygame
 
 try:
     #sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
-    #sys.path.append(glob.glob('D:/self-driving cars/simulator/CARLA_0.9.10.1/WindowsNoEditor/PythonAPI/carla/dist/carla-*%d.%d-%s.egg' % (
-     sys.path.append(glob.glob('Z:/Documents/Carla/CARLA_0.9.10/WindowsNoEditor/PythonAPI/carla/dist/carla-*%d.%d-%s.egg' % (
+    sys.path.append(glob.glob('D:/self-driving cars/simulator/CARLA_0.9.10.1/WindowsNoEditor/PythonAPI/carla/dist/carla-*%d.%d-%s.egg' % (
+     #sys.path.append(glob.glob('Z:/Documents/Carla/CARLA_0.9.10/WindowsNoEditor/PythonAPI/carla/dist/carla-*%d.%d-%s.egg' % (
         sys.version_info.major,
         sys.version_info.minor,
         'win-amd64' if os.name == 'nt' else 'linux-x86_64'))[0])
@@ -21,14 +21,37 @@ from env import CarEnv
 from agent.myagent import Agent
 
 
+
+
+def game_loop():
+    
+    env = None
+    pygame.init()
+    
+    try:
+        env = CarEnv()
+        env.reset()
+        agent = Agent(env.player)
+        while True:
+            control = agent.run_step()
+            #print(control)
+            env.player.apply_control(control)
+    finally:
+        if  env is not None:
+            env.destroy()
+        pygame.quit()
+
+
+        
 try:
-    env = CarEnv()
-    env.reset()
-    agent = Agent(env.player)
+        game_loop()
+except KeyboardInterrupt:
+        print('\nCancelled by user. Bye!')
+
+        
     
-finally:
-    pass
-    
+
+
 
 
 
