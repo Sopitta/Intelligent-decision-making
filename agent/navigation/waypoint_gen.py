@@ -61,7 +61,7 @@ class WaypointGen(object):
         self._waypoints_queue = deque(maxlen=20000)
         self._buffer_size = 5
         self._waypoint_buffer = deque(maxlen=self._buffer_size)
-        self.carenv = CarEnv()
+        #self.carenv = CarEnv()
 
         # initializing controller
         self._init_controller(opt_dict)
@@ -152,7 +152,8 @@ class WaypointGen(object):
             next_waypoints = list(last_waypoint.next(self._sampling_radius))
             
             #self.carenv.adist != None:
-            #print(self.carenv.adist)
+            #print(self.carenv.ods_sensor.ahead_dist)
+                  
             
             if len(next_waypoints) == 0:
                 break

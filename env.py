@@ -26,7 +26,7 @@ def process_ods(event):
         dist = event.distance
         print("distance from the front car is" + str(dist))
         return dist
-    
+'''    
 #https://github.com/copotron/sdv-course/blob/master/lesson0/camera.py   
 def process_img(disp, image):
     
@@ -44,7 +44,7 @@ display = pygame.display.set_mode(
         pygame.HWSURFACE | pygame.DOUBLEBUF
     )
 
-
+'''
 #https://www.programcreek.com/python/?code=erdos-project%2Fpylot%2Fpylot-master%2Fscripts%2Ftest_canny_lane_detection.py
 def spawn_driving_vehicle(client, world):
     """ This function spawns the driving vehicle and puts it into
@@ -82,35 +82,63 @@ def spawn_driving_vehicle(client, world):
     return world.get_actors().find(vehicle_id)
 
 
-class CarEnv:    
+class CarEnv(object):    
     def __init__(self):
         self.client = carla.Client("localhost", 2000)
         self.client.set_timeout(10.0)
         self.world = self.client.get_world()
         #self.world = self.client.load_world('Town01')
-        self.blueprint_library = self.world.get_blueprint_library()
-        self.model_3 = self.blueprint_library.filter("model3")[0]
+        #self.map = self.world.get_map()
         self.player = None
-        self.adist = None
+        self.rgb_cam =  None
+        
+        self.reset()
+        
         
     def reset(self):
         
-        self.actor_list = []
-         
+        #self.actor_list = []
+        
+        #self.blueprint_library = self.world.get_blueprint_library()
+        model_3 = self.world.get_blueprint_library().filter("model3")[0]
+        
+        '''
+        if self.player is not None:
+            spawn_point = self.player.get_transform()
+            spawn_point.location.z += 2.0
+            spawn_point.rotation.roll = 0.0
+            spawn_point.rotation.pitch = 0.0
+            self.destroy()
+            self.player = self.world.try_spawn_actor(model_3, spawn_point)
+            
+        while self.player is None:
+            spawn_points = self.map.get_spawn_points()
+            spawn_point = random.choice(spawn_points) if spawn_points else carla.Transform()
+            self.player = self.world.try_spawn_actor(model_3, spawn_point)
+        '''
+        
+        
         #spawn a player at a random spawn points
         self.transform = random.choice(self.world.get_map().get_spawn_points())
-        self.player = self.world.spawn_actor(self.model_3, self.transform)
-        self.actor_list.append(self.player)
-         
+        self.player = self.world.spawn_actor(model_3, self.transform)
+        #self.actor_list.append(self.player)
+        print(self.player)
+        
+        self.rgb_cam = RGBCamera(self.player)
+        #self.ods_sensor = ObjectDetectionSensor(self.player)
+        
+        #self.actor_list.append(self.rgb_cam.sensor)
+        #self.actor_list.append(self.ods_sensor.sensor)
+        
+        
+        '''
         #spawn a rgb camera attached to the player.
         self.blueprint_cam = self.blueprint_library.find('sensor.camera.rgb')
         self.cam_transform = carla.Transform(carla.Location(x=2.5, z=0.7))
-
-        #spawn the sensor and attach to vehicle.
         self.rgb_cam = self.world.spawn_actor(self.blueprint_cam, self.cam_transform, attach_to=self.player,attachment_type=carla.AttachmentType.Rigid)
         self.actor_list.append(self.rgb_cam)
-        #sensor.listen(lambda data: process_img(data))
         self.rgb_cam.listen(lambda data: process_img(display,data))
+         
          
         #spawn an object detection sensor attached to the player.
         self.blueprint_ods = self.blueprint_library.find('sensor.other.obstacle')
@@ -120,7 +148,7 @@ class CarEnv:
         self.ods_sensor = self.world.spawn_actor(self.blueprint_ods, self.ods_transform, attach_to=self.player)
         self.actor_list.append(self.ods_sensor)
         self.adist = self.ods_sensor.listen(lambda event: process_ods(event))
-        
+        '''
         
         
         #spawn other vehicles.
@@ -135,8 +163,15 @@ class CarEnv:
 
         #pygame.quit()
     def destroy(self):
-        for actor in self.actor_list:
-            actor.destroy()
+        
+         """Destroys all actors"""
+         actors = [self.rgb_cam.sensor, self.player]
+         print('destroying actors')
+         for actor in actors:
+             
+             if actor is not None:
+                 actor.destroy()
+        #pygame.quit()
  
     
 # ==============================================================================
@@ -147,6 +182,7 @@ class ObjectDetectionSensor(object):
      def __init__(self, parent_actor):
          self.sensor = None
          self.parent = parent_actor
+         self.ahead_dist = 100
          world = self.parent.get_world()
          bp = world.get_blueprint_library().find('sensor.other.obstacle')
          bp.set_attribute('only_dynamics', 'TRUE')
@@ -158,8 +194,9 @@ class ObjectDetectionSensor(object):
      @staticmethod
      def on_detection(weak_self,event):
          self = weak_self()
-          if not self:
-            return
+         if not self:
+             
+             return
          other = event.other_actor #carla.Actor
          if "vehicle" in other.type_id:
              dist = event.distance
@@ -179,21 +216,24 @@ class RGBCamera(object):
          transform = carla.Transform(carla.Location(x=2.5, z=0.7))
          self.sensor = world.spawn_actor(bp, transform, attach_to=self.parent,attachment_type=carla.AttachmentType.Rigid)
          weak_self = weakref.ref(self)
-         self.sensor.listen(lambda data: RGBCamera.process_img(weak_self, data))
+         display = pygame.display.set_mode((1200, 600),pygame.HWSURFACE | pygame.DOUBLEBUF)
+         self.sensor.listen(lambda data: RGBCamera.process_img(weak_self,display,data))
          
      @staticmethod
-     def process_img(weak_self,image):
+     def process_img(weak_self,disp,image):
          self = weak_self()
-          if not self:
-            return
-          org_array = np.frombuffer(image.raw_data, dtype=np.dtype('uint8'))
-          array = np.reshape(org_array, (image.height, image.width, 4))
-          array = array[:, :, :3]
-          array = array[:,:,::-1]
-          array = array.swapaxes(0,1)
-          surface = pygame.surfarray.make_surface(array)
-          disp.blit(surface, (200,0))
-          pygame.display.flip()
+         #if not self:
+         #    return
+        
+         org_array = np.frombuffer(image.raw_data, dtype=np.dtype('uint8'))
+         array = np.reshape(org_array, (image.height, image.width, 4))
+         array = array[:, :, :3]
+         array = array[:,:,::-1]
+         array = array.swapaxes(0,1)
+         surface = pygame.surfarray.make_surface(array)
+         disp.blit(surface, (200,0))
+         pygame.display.flip()
+
 
         
          

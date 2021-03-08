@@ -30,14 +30,15 @@ def game_loop():
     
     try:
         env = CarEnv()
-        env.reset()
         agent = Agent(env.player)
         while True:
+            ahead_dist = env
             control = agent.run_step()
             #print(control)
             env.player.apply_control(control)
     finally:
         if  env is not None:
+            print('im here')
             env.destroy()
         pygame.quit()
 
