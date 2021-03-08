@@ -5,6 +5,7 @@ import random
 import time
 import numpy as np
 import pygame
+import weakref
 
 try:
     #sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
@@ -135,7 +136,38 @@ class CarEnv:
         for actor in self.actor_list:
             actor.destroy()
  
-#create sensors object    
+    
+# ==============================================================================
+# -- CollisionSensor -----------------------------------------------------------
+# ==============================================================================   
+            
+class ObjectDetectionSensor(object):
+     def __init__(self, parent_actor):
+         self.sensor = None
+         self.parent = parent_actor
+         world = self.parent.get_world()
+         bp = world.get_blueprint_library().find('sensor.other.obstacle')
+         bp.set_attribute('only_dynamics', 'TRUE')
+         bp.set_attribute('debug_linetrace', 'TRUE')
+         self.sensor = world.spawn_actor(bp, carla.Transform(), attach_to=self.parent)
+         weak_self = weakref.ref(self)
+         self.sensor.listen(lambda event: ObjectDetectionSensor.on_detection(weak_self, event))
+         
+     @staticmethod
+     def on_detection(weak_self,event):
+         self = weak_self()
+          if not self:
+            return
+         other = event.other_actor #carla.Actor
+         if "vehicle" in other.type_id:
+             dist = event.distance
+             print("distance from the front car is" + str(dist))
+             self.ahead_dist = dist
+             
+
+        
+         
+    
         
         
     
