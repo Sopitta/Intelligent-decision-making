@@ -121,7 +121,8 @@ class WaypointGen(object):
 
         self._target_road_option = RoadOption.LANEFOLLOW
         # fill waypoint trajectory queue
-        self._compute_next_waypoints(k=200) 
+        action = None
+        self._compute_next_waypoints(action,k=200) 
     
     # might not need this function since the speed is supposed to be constant.    
     def set_speed(self, speed):
@@ -133,7 +134,7 @@ class WaypointGen(object):
         """
         self._target_speed = speed
         
-    def _compute_next_waypoints(self, k=1):
+    def _compute_next_waypoints(self, action, k=1):
         
         """
         Add new waypoints to the trajectory queue.
@@ -141,7 +142,8 @@ class WaypointGen(object):
         :param k: how many waypoints to compute
         :return:
         """
-        
+        print(action)
+        print('done')
         # check we do not overflow the queue
         available_entries = self._waypoints_queue.maxlen - len(self._waypoints_queue)
         k = min(available_entries, k)
@@ -151,9 +153,8 @@ class WaypointGen(object):
             last_waypoint = self._waypoints_queue[-1][0]
             next_waypoints = list(last_waypoint.next(self._sampling_radius))
             
-            #self.carenv.adist != None:
-            #print(self.carenv.ods_sensor.ahead_dist)
-                  
+            #print(len(next_waypoints))  
+            #print('done')
             
             if len(next_waypoints) == 0:
                 break
@@ -176,7 +177,7 @@ class WaypointGen(object):
 
             self._waypoints_queue.append((next_waypoint, road_option))
             
-    def run_step(self, debug=False):
+    def run_step(self, action, debug=False):
         """
         Execute one step of local planning which involves running the longitudinal and lateral PID controllers to
         follow the waypoints trajectory.
@@ -187,7 +188,7 @@ class WaypointGen(object):
 
         # not enough waypoints in the horizon? => add more!
         if not self._global_plan and len(self._waypoints_queue) < int(self._waypoints_queue.maxlen * 0.5):
-            self._compute_next_waypoints(k=100)
+            self._compute_next_waypoints(action, k=100)
 
         if len(self._waypoints_queue) == 0 and len(self._waypoint_buffer) == 0:
             control = carla.VehicleControl()
@@ -200,7 +201,8 @@ class WaypointGen(object):
             return control
 
         #   Buffering the waypoints
-        if not self._waypoint_buffer:
+        #if deque is empty, not deque is True
+        if not self._waypoint_buffer: #when self._waypoint_buffer is empty
             for _ in range(self._buffer_size):
                 if self._waypoints_queue:
                     self._waypoint_buffer.append(
@@ -214,8 +216,6 @@ class WaypointGen(object):
         # target waypoint
         self.target_waypoint, self._target_road_option = self._waypoint_buffer[0]
         # move using PID controllers
-        #print(self._target_speed)
-        #print(self.target_waypoint)
         control = self._vehicle_controller.run_step(self._target_speed, self.target_waypoint)
 
         # purge the queue of obsolete waypoints

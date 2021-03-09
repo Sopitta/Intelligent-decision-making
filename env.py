@@ -125,7 +125,7 @@ class CarEnv(object):
         print(self.player)
         
         self.rgb_cam = RGBCamera(self.player)
-        #self.ods_sensor = ObjectDetectionSensor(self.player)
+        self.ods_sensor = ObjectDetectionSensor(self.player)
         
         #self.actor_list.append(self.rgb_cam.sensor)
         #self.actor_list.append(self.ods_sensor.sensor)

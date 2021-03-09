@@ -22,21 +22,24 @@ from waypoint_gen import WaypointGen
 class Agent:
     def __init__(self, vehicle, target_speed = 20):
          self.vehicle = vehicle
-         self.waypoint_gen = WaypointGen(self.vehicle, opt_dict={'target_speed' : target_speed})                                                         
-    def safeaction(self):
-        #if condition
-            #action = 0
-        #else:
-            #action = 1
-        action = 0
-        return action
+         self.waypoint_gen = WaypointGen(self.vehicle, opt_dict={'target_speed' : target_speed}) 
+         self_action = None
+    def safeaction(self,distance):
+        if distance < 5:
+            self.action = 1 #change
+        else:
+            self.action = 0 #stay
+        
+        return self.action
+    '''
     def genwaypoints(self):
         #geneate way points based on the chosen action (velocity and acceleration)
         #will need a controller here
         next_wp = self.waypoint_gen._compute_next_waypoints()
         return next_wp 
-    def run_step(self):
-        control = self.waypoint_gen.run_step()
+    '''
+    def run_step(self,action):
+        control = self.waypoint_gen.run_step(action)
         return control
     
         

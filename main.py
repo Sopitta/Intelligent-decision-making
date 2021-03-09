@@ -33,7 +33,8 @@ def game_loop():
         agent = Agent(env.player)
         while True:
             dist = env.ods_sensor.ahead_dist
-            control = agent.run_step()
+            action = agent.safeaction(dist)
+            control = agent.run_step(action)
             #print(control)
             env.player.apply_control(control)
     finally:
