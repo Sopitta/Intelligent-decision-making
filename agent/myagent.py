@@ -17,16 +17,21 @@ import carla
 sys.path.insert(1, 'D:/Master thesis/agent/navigation')
 #sys.path.insert(0, '..')
 #from navigation.waypoint_gen import WaypointGen
-from waypoint_gen import WaypointGen
+from local_planner import LocalPlanner
+#from waypoint_gen import WaypointGen
 from global_route_planner import GlobalRoutePlanner
 from global_route_planner_dao import GlobalRoutePlannerDAO
 
 class Agent:
     def __init__(self, vehicle, target_speed = 20):
          self.vehicle = vehicle
-         self.waypoint_gen = WaypointGen(self.vehicle, opt_dict={'target_speed' : target_speed}) 
+         self.local_plan = LocalPlanner(self.vehicle, opt_dict={'target_speed' : target_speed}) 
+         self.world = self.vehicle.get_world()
+         self.map = self.world.get_map()
+         
          self._hop_resolution = 2.0
          self.action = None
+         self._grp = None
     def safeaction(self,distance):
         if distance < 5:
             self.action = 1 #change
@@ -41,7 +46,7 @@ class Agent:
         next_wp = self.waypoint_gen._compute_next_waypoints()
         return next_wp 
     '''
-    def _trace_route(self, start_waypoint, end_waypoint):
+    def trace_route(self, start_waypoint, end_waypoint):
         """
         This method sets up a global router and returns the optimal route
         from start_waypoint to end_waypoint
@@ -62,8 +67,20 @@ class Agent:
         return route
     
     def run_step(self,action):
-        control = self.waypoint_gen.run_step(action)
+        control = self.local_plan.run_step(action)
         return control
+    
+    def set_destination(self, location):
+        """
+        This method creates a list of waypoints from agent's position to destination location
+        based on the route returned by the global router
+        """
+
+        start_waypoint = self.map.get_waypoint(self.vehicle.get_location())
+        end_waypoint = self.map.get_waypoint(carla.Location(location[0], location[1], location[2]))
+
+        route_trace = self.trace_route(start_waypoint, end_waypoint)
+        self.local_plan.set_global_plan(route_trace)
     
     
         

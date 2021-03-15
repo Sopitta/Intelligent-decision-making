@@ -88,7 +88,7 @@ class CarEnv(object):
         self.client.set_timeout(10.0)
         self.world = self.client.get_world()
         #self.world = self.client.load_world('Town01')
-        #self.map = self.world.get_map()
+        self.map = self.world.get_map()
         self.player = None
         self.rgb_cam =  None
         

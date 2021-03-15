@@ -31,6 +31,10 @@ def game_loop():
     try:
         env = CarEnv()
         agent = Agent(env.player)
+        spawn_point = env.map.get_spawn_points()[0]
+        agent.set_destination((spawn_point.location.x,
+                                   spawn_point.location.y,
+                                   spawn_point.location.z))
         while True:
             dist = env.ods_sensor.ahead_dist
             action = agent.safeaction(dist)
