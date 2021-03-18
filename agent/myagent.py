@@ -83,7 +83,6 @@ class Agent:
         self.local_plan.set_global_plan(route_trace)
     
     
-        #newcomment for trial
         
     
 
