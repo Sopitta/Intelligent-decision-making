@@ -66,8 +66,8 @@ class Agent:
 
         return route
     
-    def run_step(self,action):
-        control = self.local_plan.run_step(action)
+    def run_step(self):
+        control = self.local_plan.run_step()
         return control
     
     def set_destination(self, location):

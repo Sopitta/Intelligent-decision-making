@@ -72,13 +72,19 @@ def game_loop():
         ##Modifiable Variables
         #targetLane = -3
         client = carla.Client('127.0.0.1', 2000)
-        client.set_timeout(10.0)
-        world = client.get_world()
-        map = world.get_map()
+        client.set_timeout(30.0)
+        #world = client.get_world()
+        world = client.load_world('Town01')
+        #client.reload_world()
+        #world = client.get_world()
+        #map = client.get_available_maps()
+        print(world)
+        mymap = world.get_map()
+        print(map)
         model_3 = world.get_blueprint_library().filter('vehicle.*model3*')[0]
         
         #transform = random.choice(world.get_map().get_spawn_points())
-        waypoint_list = map.generate_waypoints(40)
+        waypoint_list = mymap.generate_waypoints(40)
         #print(waypoint_list[0])
         waypoint = waypoint_list[0]
         location = waypoint.transform.location + carla.Vector3D(0, 0, 1.5)

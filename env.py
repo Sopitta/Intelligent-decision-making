@@ -101,55 +101,17 @@ class CarEnv(object):
         
         #self.blueprint_library = self.world.get_blueprint_library()
         model_3 = self.world.get_blueprint_library().filter("model3")[0]
-        
-        '''
-        if self.player is not None:
-            spawn_point = self.player.get_transform()
-            spawn_point.location.z += 2.0
-            spawn_point.rotation.roll = 0.0
-            spawn_point.rotation.pitch = 0.0
-            self.destroy()
-            self.player = self.world.try_spawn_actor(model_3, spawn_point)
-            
-        while self.player is None:
-            spawn_points = self.map.get_spawn_points()
-            spawn_point = random.choice(spawn_points) if spawn_points else carla.Transform()
-            self.player = self.world.try_spawn_actor(model_3, spawn_point)
-        '''
-        
-        
         #spawn a player at a random spawn points
-        self.transform = random.choice(self.world.get_map().get_spawn_points())
+        #self.transform = random.choice(self.world.get_map().get_spawn_points())
+        self.transform = carla.Transform(carla.Location(x=-39, y=-194, z= 0.27530714869499207), carla.Rotation(yaw=0))
         self.player = self.world.spawn_actor(model_3, self.transform)
         #self.actor_list.append(self.player)
         print(self.player)
         
+        #attach the cam
         self.rgb_cam = RGBCamera(self.player)
-        self.ods_sensor = ObjectDetectionSensor(self.player)
-        
-        #self.actor_list.append(self.rgb_cam.sensor)
-        #self.actor_list.append(self.ods_sensor.sensor)
-        
-        
-        '''
-        #spawn a rgb camera attached to the player.
-        self.blueprint_cam = self.blueprint_library.find('sensor.camera.rgb')
-        self.cam_transform = carla.Transform(carla.Location(x=2.5, z=0.7))
-        self.rgb_cam = self.world.spawn_actor(self.blueprint_cam, self.cam_transform, attach_to=self.player,attachment_type=carla.AttachmentType.Rigid)
-        self.actor_list.append(self.rgb_cam)
-        self.rgb_cam.listen(lambda data: process_img(display,data))
-         
-         
-        #spawn an object detection sensor attached to the player.
-        self.blueprint_ods = self.blueprint_library.find('sensor.other.obstacle')
-        self.blueprint_ods.set_attribute('only_dynamics', 'TRUE')
-        self.blueprint_ods.set_attribute('debug_linetrace', 'TRUE')
-        self.ods_transform = carla.Transform(carla.Location(x=1.6, z=1.7), carla.Rotation(yaw=0)) # Put this sensor on the windshield of the car.
-        self.ods_sensor = self.world.spawn_actor(self.blueprint_ods, self.ods_transform, attach_to=self.player)
-        self.actor_list.append(self.ods_sensor)
-        self.adist = self.ods_sensor.listen(lambda event: process_ods(event))
-        '''
-        
+        #self.actor_list.append(self.rgb_cam)
+        #self.ods_sensor = ObjectDetectionSensor(self.player)
         
         #spawn other vehicles.
         #self.player.apply_control(carla.VehicleControl(throttle=1.0, steer=-1.0))
@@ -160,12 +122,24 @@ class CarEnv(object):
         #for actor in self.actor_list:
         #    actor.destroy()
         #print('done.')
+        
+        #spawn second car
+        vehicle_bp = random.choice(self.world.get_blueprint_library().filter('vehicle.*'))
+        while not vehicle_bp.has_attribute('number_of_wheels') or not int(vehicle_bp.get_attribute('number_of_wheels')) == 4:
+            vehicle_bp = random.choice(self.world.get_blueprint_library().filter('vehicle.*'))
+        self.transform1 = random.choice(self.world.get_map().get_spawn_points())
+        self.car1 = self.world.spawn_actor(vehicle_bp, self.transform1)
+        self.car1.set_autopilot(True)
+        #self.actor_list.append(self.car1)
+        #self.rgb_cam = RGBCamera(self.car1)
+        print(self.car1)
 
         #pygame.quit()
+        
     def destroy(self):
         
          """Destroys all actors"""
-         actors = [self.rgb_cam.sensor, self.player]
+         actors = [self.rgb_cam.sensor, self.player, self.car1]
          print('destroying actors')
          for actor in actors:
              
@@ -173,7 +147,8 @@ class CarEnv(object):
                  actor.destroy()
         #pygame.quit()
  
-    
+   
+'''
 # ==============================================================================
 # -- ObjectDetectionSensor -----------------------------------------------------------
 # ==============================================================================   
@@ -202,7 +177,8 @@ class ObjectDetectionSensor(object):
              dist = event.distance
              print("distance from the front car is" + str(dist))
              self.ahead_dist = dist
-             
+
+'''             
 # ==============================================================================
 # -- RGBCamera -----------------------------------------------------------
 # ==============================================================================   

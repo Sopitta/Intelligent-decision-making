@@ -221,7 +221,7 @@ class LocalPlanner(object):
 
         self._global_plan = True
 
-    def run_step(self, action, debug=False):
+    def run_step(self, debug=False):
         """
         Execute one step of local planning which involves running the longitudinal and lateral PID controllers to
         follow the waypoints trajectory.
@@ -300,7 +300,7 @@ class LocalPlanner(object):
                 road_option = RoadOption.LANEFOLLOW
                 self._waypoints_queue.append((next_waypoint,road_option))
                 
-        else : #generate waypoints in a left or right 
+        else: #generate waypoints in a left or right 
             for _ in range(k):
                 last_waypoint = self._waypoints_queue[-1][0]
             #check for lane availaibility 
@@ -331,7 +331,7 @@ class LocalPlanner(object):
             self._global_plan = False
          
     
-     def run_step2(self, action, debug=False):
+    def run_step2(self, action, debug=False):
         """
         Execute one step of local planning which involves running the longitudinal and lateral PID controllers to
         follow the waypoints trajectory.
@@ -342,7 +342,7 @@ class LocalPlanner(object):
 
         # not enough waypoints in the horizon? => add more!
         if not self._global_plan:
-            self._compute_next_waypoints(k=100)
+            self._compute_next_waypoints(k=6)
 
         if len(self._waypoints_queue) == 0 and len(self._waypoint_buffer) == 0:
             control = carla.VehicleControl()

@@ -35,10 +35,17 @@ def game_loop():
         agent.set_destination((spawn_point.location.x,
                                    spawn_point.location.y,
                                    spawn_point.location.z))
+        
         while True:
-            dist = env.ods_sensor.ahead_dist
-            action = agent.safeaction(dist)
-            control = agent.run_step(action)
+            
+            #action = agent.safeaction(dist)
+            #set destination again when return from local planner to global planner
+            if len(agent.local_plan._waypoints_queue)==0 and agent.local_plan._global_plan == False :#and car is in safe state
+                agent.set_destination((spawn_point.location.x,
+                                   spawn_point.location.y,
+                                   spawn_point.location.z))
+            
+            control = agent.run_step()
             #print(control)
             env.player.apply_control(control)
     finally:
