@@ -5,6 +5,9 @@ import random
 import time
 import numpy as np
 import pygame
+from pygame.locals import KMOD_CTRL
+from pygame.locals import K_ESCAPE
+from pygame.locals import K_q
 
 try:
     #sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
@@ -35,22 +38,27 @@ def game_loop():
         agent.set_destination((spawn_point.location.x,
                                    spawn_point.location.y,
                                    spawn_point.location.z))
+        run = True
         
-        while True:
+        while run:
             
             #action = agent.safeaction(dist)
             #set destination again when return from local planner to global planner
-            if len(agent.local_plan._waypoints_queue)==0 and agent.local_plan._global_plan == False :#and car is in safe state
-                agent.set_destination((spawn_point.location.x,
+            try:
+                if len(agent.local_plan._waypoints_queue)==0 and agent.local_plan._global_plan == False :#and car is in safe state
+                    agent.set_destination((spawn_point.location.x,
                                    spawn_point.location.y,
                                    spawn_point.location.z))
             
-            control = agent.run_step()
-            #print(control)
-            env.player.apply_control(control)
+                control = agent.run_step()
+                env.player.apply_control(control)
+            except KeyboardInterrupt:
+                print('interrupt')
+                run = False
     finally:
-        if  env is not None:
-            env.destroy()
+        #if  env is not None:
+        print('destroy')
+        env.destroy()
         pygame.quit()
 
 

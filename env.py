@@ -90,6 +90,7 @@ class CarEnv(object):
         #self.world = self.client.load_world('Town01')
         self.map = self.world.get_map()
         self.player = None
+        self.car1 = None
         self.rgb_cam =  None
         
         self.reset()
@@ -97,20 +98,22 @@ class CarEnv(object):
         
     def reset(self):
         
-        #self.actor_list = []
+        self.actor_list = []
         
-        #self.blueprint_library = self.world.get_blueprint_library()
+        
         model_3 = self.world.get_blueprint_library().filter("model3")[0]
         #spawn a player at a random spawn points
         #self.transform = random.choice(self.world.get_map().get_spawn_points())
         self.transform = carla.Transform(carla.Location(x=-39, y=-194, z= 0.27530714869499207), carla.Rotation(yaw=0))
+        if self.player is not None:
+            self.destroy()
         self.player = self.world.spawn_actor(model_3, self.transform)
-        #self.actor_list.append(self.player)
+        self.actor_list.append(self.player)
         print(self.player)
         
         #attach the cam
         self.rgb_cam = RGBCamera(self.player)
-        #self.actor_list.append(self.rgb_cam)
+        self.actor_list.append(self.rgb_cam)
         #self.ods_sensor = ObjectDetectionSensor(self.player)
         
         #spawn other vehicles.
@@ -127,10 +130,12 @@ class CarEnv(object):
         vehicle_bp = random.choice(self.world.get_blueprint_library().filter('vehicle.*'))
         while not vehicle_bp.has_attribute('number_of_wheels') or not int(vehicle_bp.get_attribute('number_of_wheels')) == 4:
             vehicle_bp = random.choice(self.world.get_blueprint_library().filter('vehicle.*'))
-        self.transform1 = random.choice(self.world.get_map().get_spawn_points())
+        self.transform1 = carla.Transform(carla.Location(x=0, y=-194, z= 0.27530714869499207), carla.Rotation(yaw=0))
+        if self.car1 is not None:
+            self.destroy()
         self.car1 = self.world.spawn_actor(vehicle_bp, self.transform1)
         self.car1.set_autopilot(True)
-        #self.actor_list.append(self.car1)
+        self.actor_list.append(self.car1)
         #self.rgb_cam = RGBCamera(self.car1)
         print(self.car1)
 
@@ -139,10 +144,9 @@ class CarEnv(object):
     def destroy(self):
         
          """Destroys all actors"""
-         actors = [self.rgb_cam.sensor, self.player, self.car1]
+         #self.actors = [self.rgb_cam.sensor, self.player, self.car1]
          print('destroying actors')
-         for actor in actors:
-             
+         for actor in self.actor_list:
              if actor is not None:
                  actor.destroy()
         #pygame.quit()

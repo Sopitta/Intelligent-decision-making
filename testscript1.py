@@ -73,8 +73,8 @@ def game_loop():
         #targetLane = -3
         client = carla.Client('127.0.0.1', 2000)
         client.set_timeout(30.0)
-        #world = client.get_world()
-        world = client.load_world('Town01')
+        world = client.get_world()
+        #world = client.load_world('Town01')
         #client.reload_world()
         #world = client.get_world()
         #map = client.get_available_maps()
@@ -125,7 +125,7 @@ def game_loop():
         vehicle.set_autopilot(True)
         #vehicle.set_light_state(self._lights)
         
-        time.sleep(120)
+        time.sleep(20)
         
     finally:
         #if world is not None:
