@@ -18,6 +18,7 @@ sys.path.insert(1, 'D:/Master thesis/agent/navigation')
 
 class HighLevelSC(object):
     def __init__(self):
+        self.a = None
         
     def get_obs(self, car):
         '''
@@ -33,6 +34,28 @@ class HighLevelSC(object):
         heading_rad = heading_deg * (np.pi/180) #rad
         v_ms = math.sqrt(loc_xyz.x**2 + loc_xyz.z**2 + loc_xyz.z**2)
         return [loc_xyz.x,loc.xyz.y,heading_rad,v_ms]
+    
+    def euclidean_dist(self,obs1,obs2):
+        '''
+        obs1/2:Observations(list) 
+        return: 
+        dist :Distance between two vehicles calulated from their observations
+        '''
+        a = np.array((obs1[0],obs1[1])) #(2,)
+        b = np.array((obs2[0],obs2[1])) #(2,)
+        dist = np.linalg.norm(a-b)
+        return dist
+    
+    def safe_action(dist):
+        
+        if dist < = 5:
+            action = 1 #change lane
+        else:
+            action = 0 #stay in the same lane
+            
+        
+        
+        
         
         
         
