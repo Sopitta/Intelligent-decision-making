@@ -113,7 +113,7 @@ class CarEnv(object):
         
         #attach the cam
         self.rgb_cam = RGBCamera(self.player)
-        self.actor_list.append(self.rgb_cam)
+        self.actor_list.append(self.rgb_cam.sensor)
         #self.ods_sensor = ObjectDetectionSensor(self.player)
         
         #spawn other vehicles.

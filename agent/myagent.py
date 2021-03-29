@@ -22,6 +22,7 @@ from local_planner import LocalPlanner
 from global_route_planner import GlobalRoutePlanner
 from global_route_planner_dao import GlobalRoutePlannerDAO
 
+
 class Agent:
     def __init__(self, vehicle, target_speed = 20):
          self.vehicle = vehicle
@@ -32,6 +33,7 @@ class Agent:
          self._hop_resolution = 2.0
          self.action = None
          self._grp = None
+          
     def safeaction(self,distance):
         if distance < 5:
             self.action = 1 #change
@@ -69,6 +71,12 @@ class Agent:
     def run_step(self):
         control = self.local_plan.run_step()
         return control
+    
+    def run_step2(self,action,prevaction):
+        control = self.local_plan.run_step2(action,prevaction)
+        return control
+    
+    
     
     def set_destination(self, location):
         """

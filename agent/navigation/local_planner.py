@@ -83,7 +83,8 @@ class LocalPlanner(object):
         # initializing controller
         self._init_controller(opt_dict)
         
-        self.n = 0
+        self.buffer_old = None
+        self.n_modify_wp = 0
 
     def __del__(self):
         if self._vehicle:
@@ -231,7 +232,7 @@ class LocalPlanner(object):
         :param debug: boolean flag to activate waypoints debugging
         :return: control to be applied
         """
-        self.n = self.n + 1
+        
         #print(self.n)
         # not enough waypoints in the horizon? => add more!
         #if not self._global_plan and len(self._waypoints_queue) < int(self._waypoints_queue.maxlen * 0.5):
@@ -277,69 +278,14 @@ class LocalPlanner(object):
         if max_index >= 0:
             for i in range(max_index + 1):
                 self._waypoint_buffer.popleft()
-        print(len(self._waypoint_buffer))
+        #print(len(self._waypoint_buffer))
         if debug:
             draw_waypoints(self._vehicle.get_world(), [self.target_waypoint], self._vehicle.get_location().z + 1.0)
         
         
         return control
     
-    def _compute_next_waypoints2(self, action, k=1):
-        """
-        Calculate 
-
-        :param k: how many waypoints to compute
-        :return:
-        """
-        #clear queue buffer
-        self._waypoints_queue.clear()
-        self._waypoint_buffer.clear()
-        
-        #get the current way point
-        current_waypoint = self.map.get_waypoint(self._vehicle.get_location())
-        current_road_option = RoadOption.LANEFOLLOW
-        self._waypoints_queue.append((current_waypoint,current_road_option))
-        
-        #stay in the same lane.
-        if action == 0: #stay
-            for _ in range(k):
-                last_waypoint = self._waypoints_queue[-1][0]    
-                next_waypoint = last_waypoint.next(self._sampling_radius)[0]
-                road_option = RoadOption.LANEFOLLOW
-                self._waypoints_queue.append((next_waypoint,road_option))
-                
-        else: #generate waypoints in a left or right 
-            for _ in range(k):
-                last_waypoint = self._waypoints_queue[-1][0]
-            #check for lane availaibility 
-                # go right if it's available
-                if last_waypoint.get_right_lane() is not None:
-                    if _ == 0:
-                        next_waypoint = last_waypoint.get_right_lane()
-                        road_option = RoadOption.CHANGELANERIGHT
-                    else:
-                        next_waypoint = last_waypoint.next(self._sampling_radius)[0]
-                        road_option = RoadOption.LANEFOLLOW
-                        
-                #go left if right it's not good.        
-                else:
-                    
-                    if _ == 0:
-                        next_waypoint = last_waypoint.get_left_lane()
-                        road_option = RoadOption.CHANGELANELEFT
-                    else:
-                        next_waypoint = last_waypoint.next(self._sampling_radius)[0]
-                        road_option = RoadOption.LANEFOLLOW
-                        
-                self._waypoints_queue.append((next_waypoint,road_option))
-                
-                #remove the current location from the queue because it is already there
-                self._waypoints_queue.popleft()
-                
-            self._global_plan = False
-         
-    
-    def run_step2(self, action, debug=False):
+    def run_step2(self, action,prevaction,debug=False):
         """
         Execute one step of local planning which involves running the longitudinal and lateral PID controllers to
         follow the waypoints trajectory.
@@ -347,11 +293,16 @@ class LocalPlanner(object):
         :param debug: boolean flag to activate waypoints debugging
         :return: control to be applied
         """
-
+        #self.n = self.n + 1
+        #print(self.n)
         # not enough waypoints in the horizon? => add more!
-        if not self._global_plan:
-            self._compute_next_waypoints(k=6)
-
+        #if not self._global_plan and len(self._waypoints_queue) < int(self._waypoints_queue.maxlen * 0.5):
+        #    self._compute_next_waypoints(k=100)
+        #print('run step2')
+        print('action:'+str(action))
+        print('prevaction'+str(prevaction))
+        #print('len '+str(len(self._waypoints_queue)))
+        buffer_old_len = self.buffer_old
         if len(self._waypoints_queue) == 0 and len(self._waypoint_buffer) == 0:
             control = carla.VehicleControl()
             control.steer = 0.0
@@ -370,14 +321,30 @@ class LocalPlanner(object):
                         self._waypoints_queue.popleft())
                 else:
                     break
-
+        #if some conditions are true; manipulate the whole wp buffer.
+        buffer_len = len(self._waypoint_buffer)
+        #print(buffer_len)
+        if prevaction!= None and prevaction != action:
+            #print('here')
+            self.n_modify_wp = 10
+        
+        
         # current vehicle waypoint
         vehicle_transform = self._vehicle.get_transform()
         self._current_waypoint = self._map.get_waypoint(vehicle_transform.location)
         # target waypoint
         self.target_waypoint, self._target_road_option = self._waypoint_buffer[0]
+        target_glob_wp_y = self.target_waypoint
         # move using PID controllers
+        print(self.n_modify_wp)
+        if self.n_modify_wp > 0 and buffer_len!=buffer_old_len: 
+            
+            #self._current_waypoint        
+            self.target_waypoint.transform.location.y = self.target_waypoint.transform.location.y - 5
+            self.n_modify_wp  = self.n_modify_wp - 1
+           
         control = self._vehicle_controller.run_step(self._target_speed, self.target_waypoint)
+        
 
         # purge the queue of obsolete waypoints
         max_index = -1
@@ -388,11 +355,15 @@ class LocalPlanner(object):
         if max_index >= 0:
             for i in range(max_index + 1):
                 self._waypoint_buffer.popleft()
-
+    
         if debug:
             draw_waypoints(self._vehicle.get_world(), [self.target_waypoint], self._vehicle.get_location().z + 1.0)
-
+        
+        self.buffer_old = buffer_len
+        
+        
         return control
+    
 
     def done(self):
         """

@@ -18,22 +18,24 @@ sys.path.insert(1, 'D:/Master thesis/agent/navigation')
 
 class HighLevelSC(object):
     def __init__(self):
-        self.a = None
-        
+        self.a = None   
     def get_obs(self, car):
         '''
         car:carla.Actor, type carla.Vehicle
         return: Observation 
         
         '''
+        #print('getting obs')
         loc_xyz = car.get_location()
         t = car.get_transform()
         a_xyz = car.get_acceleration() #m/s2^2
         v_xyz = car.get_velocity() #m/s
-        heading_deg = t.rotation.yaw #deg
-        heading_rad = heading_deg * (np.pi/180) #rad
-        v_ms = math.sqrt(loc_xyz.x**2 + loc_xyz.z**2 + loc_xyz.z**2)
-        return [loc_xyz.x,loc.xyz.y,heading_rad,v_ms]
+        heading_rad = t.rotation.yaw * (np.pi/180) #rad
+        v_ms = math.sqrt(v_xyz.x**2 + v_xyz.z**2 + v_xyz.z**2)
+        x = loc_xyz.x
+        y = loc_xyz.y
+        
+        return [x,y,heading_rad,v_ms]
     
     def euclidean_dist(self,obs1,obs2):
         '''
@@ -41,17 +43,42 @@ class HighLevelSC(object):
         return: 
         dist :Distance between two vehicles calulated from their observations
         '''
+        
         a = np.array((obs1[0],obs1[1])) #(2,)
         b = np.array((obs2[0],obs2[1])) #(2,)
         dist = np.linalg.norm(a-b)
         return dist
     
-    def safe_action(dist):
+    def safe_action(self,dist):
         
-        if dist < = 5:
+        if dist <= 30:
             action = 1 #change lane
         else:
             action = 0 #stay in the same lane
+            
+        return action
+            
+    def get_obs2(self, car):
+        '''
+        car:carla.Actor, type carla.Vehicle
+        return: Observation 
+        
+        '''
+        #print('getting obs')
+        loc_xyz = car.get_location()
+        t = car.get_transform()
+        a_xyz = car.get_acceleration() #m/s2^2
+        v_xyz = car.get_velocity() #m/s
+        print(v_xyz)
+        #print(t.rotation.yaw)
+        #heading_deg = t.rotation.yaw #deg
+        #print(heading_deg)
+        #heading_rad = heading_deg * (np.pi/180) #rad
+        #print(heading_rad)
+        v_ms = math.sqrt(v_xyz.x**2 + v_xyz.z**2 + v_xyz.z**2)
+        print(v_ms)
+        
+        return [100,200]
             
         
         
