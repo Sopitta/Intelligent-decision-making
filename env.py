@@ -134,7 +134,8 @@ class CarEnv(object):
         if self.car1 is not None:
             self.destroy()
         self.car1 = self.world.spawn_actor(vehicle_bp, self.transform1)
-        self.car1.set_autopilot(True)
+        #self.car1.set_autopilot(True)
+        self.car1.apply_control(carla.VehicleControl(throttle=0.35, steer=0))
         self.actor_list.append(self.car1)
         #self.rgb_cam = RGBCamera(self.car1)
         print(self.car1)

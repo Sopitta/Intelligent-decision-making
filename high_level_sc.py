@@ -51,34 +51,13 @@ class HighLevelSC(object):
     
     def safe_action(self,dist):
         
-        if dist <= 30:
+        if dist <= 12:
             action = 1 #change lane
         else:
             action = 0 #stay in the same lane
             
         return action
             
-    def get_obs2(self, car):
-        '''
-        car:carla.Actor, type carla.Vehicle
-        return: Observation 
-        
-        '''
-        #print('getting obs')
-        loc_xyz = car.get_location()
-        t = car.get_transform()
-        a_xyz = car.get_acceleration() #m/s2^2
-        v_xyz = car.get_velocity() #m/s
-        print(v_xyz)
-        #print(t.rotation.yaw)
-        #heading_deg = t.rotation.yaw #deg
-        #print(heading_deg)
-        #heading_rad = heading_deg * (np.pi/180) #rad
-        #print(heading_rad)
-        v_ms = math.sqrt(v_xyz.x**2 + v_xyz.z**2 + v_xyz.z**2)
-        print(v_ms)
-        
-        return [100,200]
             
         
         

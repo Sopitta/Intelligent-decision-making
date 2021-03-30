@@ -293,14 +293,13 @@ class LocalPlanner(object):
         :param debug: boolean flag to activate waypoints debugging
         :return: control to be applied
         """
-        #self.n = self.n + 1
-        #print(self.n)
+        
         # not enough waypoints in the horizon? => add more!
         #if not self._global_plan and len(self._waypoints_queue) < int(self._waypoints_queue.maxlen * 0.5):
         #    self._compute_next_waypoints(k=100)
         #print('run step2')
-        print('action:'+str(action))
-        print('prevaction'+str(prevaction))
+        #print('action:'+str(action))
+        #print('prevaction'+str(prevaction))
         #print('len '+str(len(self._waypoints_queue)))
         buffer_old_len = self.buffer_old
         if len(self._waypoints_queue) == 0 and len(self._waypoint_buffer) == 0:
@@ -325,25 +324,36 @@ class LocalPlanner(object):
         buffer_len = len(self._waypoint_buffer)
         #print(buffer_len)
         if prevaction!= None and prevaction != action:
-            #print('here')
-            self.n_modify_wp = 10
+            self.n_modify_wp = 15
         
         
         # current vehicle waypoint
         vehicle_transform = self._vehicle.get_transform()
         self._current_waypoint = self._map.get_waypoint(vehicle_transform.location)
         # target waypoint
-        self.target_waypoint, self._target_road_option = self._waypoint_buffer[0]
-        target_glob_wp_y = self.target_waypoint
-        # move using PID controllers
-        print(self.n_modify_wp)
-        if self.n_modify_wp > 0 and buffer_len!=buffer_old_len: 
+        self.target_waypoint_initial, self._target_road_option = self._waypoint_buffer[0]
+        self.target_waypoint_modified = self.target_waypoint_initial
+        #print(self.target_waypoint_initial)
+        #print(self.target_waypoint_initial.get_left_lane())
+        #print(self.n_modify_wp)
+        if self.n_modify_wp > 0 : 
+            #print('here'+str(self.n_modify_wp))
+            #print(len(self._waypoint_buffer))
             
-            #self._current_waypoint        
-            self.target_waypoint.transform.location.y = self.target_waypoint.transform.location.y - 5
-            self.n_modify_wp  = self.n_modify_wp - 1
-           
-        control = self._vehicle_controller.run_step(self._target_speed, self.target_waypoint)
+            new_wp = self.target_waypoint_initial.get_left_lane()
+            #print(self.target_waypoint_initial.get_left_lane())
+            self.target_waypoint_modified = new_wp
+            if buffer_len!=buffer_old_len:
+                self.n_modify_wp  = self.n_modify_wp - 1
+            
+            print('current wp ', self._current_waypoint )
+            print(self.target_waypoint_initial, "    ", self.target_waypoint_modified)
+            
+            
+        # move using PID controllers 
+        control = self._vehicle_controller.run_step(self._target_speed, self.target_waypoint_modified)
+        #control = self._vehicle_controller.run_step(self._target_speed, self.target_waypoint_initial)
+        
         
 
         # purge the queue of obsolete waypoints
