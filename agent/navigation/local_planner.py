@@ -11,12 +11,14 @@ import random
 import sys
 
 import carla
-sys.path.insert(1, 'D:/Master thesis/agent/navigation/controller')
-sys.path.insert(1, 'D:/Master thesis')
-from PIDcontroller import VehiclePIDController
-#from agents.navigation.controller import VehiclePIDController
-from controller.utils.misc import draw_waypoints
-#from agents.tools.misc import draw_waypoints
+#sys.path.insert(1, 'D:/Master thesis/agent/navigation/controller')
+#sys.path.insert(1, 'D:/Master thesis')
+#sys.path.insert(1, 'C:/School/Master thesis/agent/navigation/controller')
+#sys.path.insert(1, 'C:/School/Master thesis')
+#from PIDcontroller import VehiclePIDController
+from agent.navigation.controller.PIDcontroller import VehiclePIDController
+from agent.navigation.controller.utils.misc import draw_waypoints
+
 
 
 class RoadOption(Enum):

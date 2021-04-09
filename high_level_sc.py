@@ -3,19 +3,22 @@ import os
 import sys
 import numpy as np
 import math
+'''
 try:
     #sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
-    sys.path.append(glob.glob('D:/self-driving cars/simulator/CARLA_0.9.10.1/WindowsNoEditor/PythonAPI/carla/dist/carla-*%d.%d-%s.egg' % (
+    #sys.path.append(glob.glob('D:/self-driving cars/simulator/CARLA_0.9.10.1/WindowsNoEditor/PythonAPI/carla/dist/carla-*%d.%d-%s.egg' % (
     #sys.path.append(glob.glob('Z:/Documents/Carla/CARLA_0.9.10/WindowsNoEditor/PythonAPI/carla/dist/carla-*%d.%d-%s.egg' % (
+    sys.path.append(glob.glob('C:/School/Carla sim/CARLA_0.9.11/WindowsNoEditor/PythonAPI/carla/dist/carla-*%d.%d-%s.egg' % (
         sys.version_info.major,
         sys.version_info.minor,
         'win-amd64' if os.name == 'nt' else 'linux-x86_64'))[0])
 except IndexError:
     pass
+'''
 import carla
 # insert at 1, 0 is the script path (or '' in REPL)
-sys.path.insert(1, 'D:/Master thesis/agent/navigation')
-
+#sys.path.insert(1, 'D:/Master thesis/agent/navigation')
+sys.path.insert(1, 'C:/School/Master thesis/agent/navigation')
 class HighLevelSC(object):
     def __init__(self):
         self.a = None   

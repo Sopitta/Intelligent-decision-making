@@ -21,7 +21,7 @@ except IndexError:
     pass
 
 import carla
-from env import CarEnv
+from env import CarEnv, World, HUD
 from agent.myagent import Agent
 from high_level_sc import HighLevelSC
 
@@ -32,9 +32,15 @@ def game_loop():
     
     env = None
     pygame.init()
+    pygame.font.init()
     
     try:
-        env = CarEnv()
+        client = carla.Client("localhost", 2000)
+        client.set_timeout(4.0)
+        display = pygame.display.set_mode((1280, 720),pygame.HWSURFACE | pygame.DOUBLEBUF)
+        hud = HUD(1280, 720)
+        #env = CarEnv()
+        env = World(client.get_world(), hud)
         player = env.player
         car1 = env.car1
         agent = Agent(player)
@@ -46,8 +52,11 @@ def game_loop():
         prev_action = None
         action = None 
         run = True
-        
+        clock = pygame.time.Clock()
         while run:
+                env.tick(clock)
+                env.render(display)
+                pygame.display.flip()
             
             #action = agent.safeaction(dist)
             #set destination again when return from local planner to global planner
@@ -79,7 +88,7 @@ def game_loop():
         
 try:
         game_loop()
-except KeyboardInterrupt:
+except KeyboardInterrupt or K_ESCAPE:
         print('\nCancelled by user. Bye!')
 
         
