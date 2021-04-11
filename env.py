@@ -19,6 +19,7 @@ import logging
 import math
 import os
 import re
+import matplotlib.pyplot as plt
 
 import carla
 from carla import ColorConverter as cc
@@ -122,10 +123,7 @@ class CarEnv(object):
  
 class World(object):    
     def __init__(self, carla_world, hud):
-        
-        self.world = self.world = carla_world
-        #self.world = self.client.get_world()
-        #self.world = self.client.load_world('Town01')
+        self.world = carla_world
         self.map = self.world.get_map()
         self.player = None
         self.car1 = None
@@ -138,12 +136,27 @@ class World(object):
     def reset(self):
         
         self.actor_list = []
-        
-        
         model_3 = self.world.get_blueprint_library().filter("model3")[0]
-        #spawn a player at a random spawn points
-        #self.transform = random.choice(self.world.get_map().get_spawn_points())
-        self.transform = carla.Transform(carla.Location(x=-39, y=-194, z= 0.27530714869499207), carla.Rotation(yaw=0))
+        #town03
+        #transform = carla.Transform(carla.Location(x=-39, y=-194, z= 0.27530714869499207), carla.Rotation(yaw=0))
+        #town05
+        '''
+        x_p = [p.location.x for p in self.map.get_spawn_points()]
+        y_p = [p.location.y for p in self.map.get_spawn_points()]
+        n = [i for i in range(len(self.map.get_spawn_points()))]
+        fig, ax = plt.subplots(figsize=(15,15))
+        ax.scatter(x_p,y_p)
+        for i, txt in enumerate(n):
+            if txt >= 300:
+                ax.annotate(txt, (x_p[i], y_p[i]))
+        plt.show()
+        '''
+        self.transform = self.map.get_spawn_points()[254]
+        #self.transform = carla.Transform(carla.Location(x=162.2, y=-180.2, z= -0), carla.Rotation(yaw=-147.6))
+        #self.transform = carla.Transform(carla.Location(x=-14.4, y=-207.3, z= 0.3), carla.Rotation(yaw=270))
+        #ob_tr = carla.Location(x=149.1, y=104.8)
+        #self.transform = self.map.get_waypoint(ob_tr).transform
+        print(self.transform)
         if self.player is not None:
             self.destroy()
         self.player = self.world.spawn_actor(model_3, self.transform)
@@ -156,14 +169,14 @@ class World(object):
         vehicle_bp = random.choice(self.world.get_blueprint_library().filter('vehicle.*'))
         while not vehicle_bp.has_attribute('number_of_wheels') or not int(vehicle_bp.get_attribute('number_of_wheels')) == 4:
             vehicle_bp = random.choice(self.world.get_blueprint_library().filter('vehicle.*'))
-        self.transform1 = carla.Transform(carla.Location(x=0, y=-194, z= 0.27530714869499207), carla.Rotation(yaw=0))
+        #self.transform1 = carla.Transform(carla.Location(x=149.1, y=104.8, z= 0.0), carla.Rotation(yaw=-53.8))
+        self.transform1 = self.map.get_spawn_points()[10]
         if self.car1 is not None:
             self.destroy()
         self.car1 = self.world.spawn_actor(vehicle_bp, self.transform1)
-        #self.car1.set_autopilot(True)
-        self.car1.apply_control(carla.VehicleControl(throttle=0.35, steer=0))
+        self.car1.set_autopilot(True)
+        #self.car1.apply_control(carla.VehicleControl(throttle=0.35, steer=0))
         self.actor_list.append(self.car1)
-        #self.rgb_cam = RGBCamera(self.car1)
         print(self.car1)
         
         cam_index = self.camera_manager.index if self.camera_manager is not None else 0
