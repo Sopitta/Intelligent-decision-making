@@ -169,8 +169,9 @@ class World(object):
         vehicle_bp = random.choice(self.world.get_blueprint_library().filter('vehicle.*'))
         while not vehicle_bp.has_attribute('number_of_wheels') or not int(vehicle_bp.get_attribute('number_of_wheels')) == 4:
             vehicle_bp = random.choice(self.world.get_blueprint_library().filter('vehicle.*'))
-        #self.transform1 = carla.Transform(carla.Location(x=149.1, y=104.8, z= 0.0), carla.Rotation(yaw=-53.8))
-        self.transform1 = self.map.get_spawn_points()[10]
+        #self.transform1 = carla.Transform(carla.Location(x=52.3, y=205.3, z= 30.0), carla.Rotation(yaw=0))
+        self.transform1 = carla.Transform(carla.Location(x=52.3, y=205.3, z= 30.0))
+        #self.transform1 = self.map.get_spawn_points()[234]
         if self.car1 is not None:
             self.destroy()
         self.car1 = self.world.spawn_actor(vehicle_bp, self.transform1)
