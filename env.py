@@ -151,12 +151,11 @@ class World(object):
                 ax.annotate(txt, (x_p[i], y_p[i]))
         plt.show()
         '''
-        self.transform = self.map.get_spawn_points()[254]
+        #self.transform = self.map.get_spawn_points()[254]
         #self.transform = carla.Transform(carla.Location(x=162.2, y=-180.2, z= -0), carla.Rotation(yaw=-147.6))
         #self.transform = carla.Transform(carla.Location(x=-14.4, y=-207.3, z= 0.3), carla.Rotation(yaw=270))
-        #ob_tr = carla.Location(x=149.1, y=104.8)
-        #self.transform = self.map.get_waypoint(ob_tr).transform
-        print(self.transform)
+        self.transform = carla.Transform(carla.Location(x=581.6, y=-17.2, z=30),carla.Rotation(yaw=-180)) #map6
+        #print(self.transform)
         if self.player is not None:
             self.destroy()
         self.player = self.world.spawn_actor(model_3, self.transform)
@@ -170,7 +169,8 @@ class World(object):
         while not vehicle_bp.has_attribute('number_of_wheels') or not int(vehicle_bp.get_attribute('number_of_wheels')) == 4:
             vehicle_bp = random.choice(self.world.get_blueprint_library().filter('vehicle.*'))
         #self.transform1 = carla.Transform(carla.Location(x=52.3, y=205.3, z= 30.0), carla.Rotation(yaw=0))
-        self.transform1 = carla.Transform(carla.Location(x=52.3, y=205.3, z= 30.0))
+        #self.transform1 = carla.Transform(carla.Location(x=52.3, y=205.3, z= 30.0))
+        self.transform1 = carla.Transform(carla.Location(x=530.9, y=-13.9, z= 30.0),carla.Rotation(yaw=-180)) #map6
         #self.transform1 = self.map.get_spawn_points()[234]
         if self.car1 is not None:
             self.destroy()

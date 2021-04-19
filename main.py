@@ -40,7 +40,7 @@ def game_loop():
         display = pygame.display.set_mode((1280, 720),pygame.HWSURFACE | pygame.DOUBLEBUF)
         hud = HUD(1280, 720)
         #env = CarEnv()
-        env = World(client.load_world('Town05'), hud)
+        env = World(client.load_world('Town06'), hud)
         #env = World(client.get_world(), hud)
         player = env.player
         car1 = env.car1
