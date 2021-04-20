@@ -69,6 +69,8 @@ def game_loop():
                 player_obs = highlevel_sc.get_obs(player)
                 car1_obs = highlevel_sc.get_obs(car1)
                 dist = highlevel_sc.euclidean_dist(player_obs,car1_obs)
+                ref = highlevel_sc.get_xy_ref(player)
+                print(ref)
                 #print(dist)
                 #control = agent.run_step()
                 action = highlevel_sc.safe_action(dist)

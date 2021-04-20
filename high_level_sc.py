@@ -20,8 +20,10 @@ import carla
 #sys.path.insert(1, 'D:/Master thesis/agent/navigation')
 sys.path.insert(1, 'C:/School/Master thesis/agent/navigation')
 class HighLevelSC(object):
-    def __init__(self):
-        self.a = None   
+    def __init__(self,world):
+        self.a = None 
+        self.world_h = world
+        self.map_h = self.world.get_map()
     def get_obs(self, car):
         '''
         car:carla.Actor, type carla.Vehicle
@@ -42,7 +44,7 @@ class HighLevelSC(object):
     
     def euclidean_dist(self,obs1,obs2):
         '''
-        obs1/2:Observations(list) 
+        obs1,obs2:Observations(list) 
         return: 
         dist :Distance between two vehicles calulated from their observations
         '''
@@ -60,8 +62,20 @@ class HighLevelSC(object):
             action = 0 #stay in the same lane
             
         return action
+    def get_xy_ref(self, player):
+        '''
+        player: a player, type carla.Vehicle
+        return: 
+        ref_wp :a carla waypoint that is used as a reference point in angle calculation
+        '''
+        #get player's current location.
+        cur_t = player.get_transform()
+        cur_wp = self.map_h.get_waypoint(cur_t.location)
+        #assuming that it is a lane following scenario only
+        ref_wp = cur_wp.next(5.5)[0]
+        return [ref_wp.transform.location.x,ref_wp.transform.location.y]
             
-            
+    
         
         
         
