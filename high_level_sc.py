@@ -21,9 +21,9 @@ import carla
 sys.path.insert(1, 'C:/School/Master thesis/agent/navigation')
 class HighLevelSC(object):
     def __init__(self,world):
-        self.a = None 
+        #self.a = None 
         self.world_h = world
-        self.map_h = self.world.get_map()
+        self.map_h = self.world_h.get_map()
     def get_obs(self, car):
         '''
         car:carla.Actor, type carla.Vehicle
@@ -70,11 +70,54 @@ class HighLevelSC(object):
         '''
         #get player's current location.
         cur_t = player.get_transform()
-        cur_wp = self.map_h.get_waypoint(cur_t.location)
-        #assuming that it is a lane following scenario only
-        ref_wp = cur_wp.next(5.5)[0]
-        return [ref_wp.transform.location.x,ref_wp.transform.location.y]
-            
+        #the reference is in front of the player
+        ref_xy = np.array((cur_t.location.x-5,cur_t.location.y))
+        
+        return ref_xy
+    
+    def get_xy_player(self, player):
+        '''
+        player: a player, type carla.Vehicle
+        return: 
+        ref_wp :a carla waypoint that is used as a reference point in angle calculation
+        '''
+        #get player's current location.
+        cur_t = player.get_transform()
+        #the reference is in front of the player
+        player_xy = np.array((cur_t.location.x,cur_t.location.y))
+        return player_xy
+    
+    def get_xy_car1(self, car1):
+        '''
+        player: a player, type carla.Vehicle
+        return: 
+        ref_wp :a carla waypoint that is used as a reference point in angle calculation
+        '''
+        #get player's current location.
+        cur_t = car1.get_transform()
+        #the reference is in front of the player
+        car1_xy = np.array((cur_t.location.x,cur_t.location.y))
+        return car1_xy
+    
+    def get_xy_car2(self, car2):
+        '''
+        player: a player, type carla.Vehicle
+        return: 
+        ref_wp :a carla waypoint that is used as a reference point in angle calculation
+        '''
+        #get player's current location.
+        cur_t = car2.get_transform()
+        #the reference is in front of the player
+        car2_xy = np.array((cur_t.location.x,cur_t.location.y))
+        return car2_xy
+    
+    def get_theta_car1(self,ref_xy,car_xy,player):
+        
+        v0 = car_xy - ref_xy
+        v1 = player - ref_xy
+        angle = np.math.atan2(np.linalg.det([v0,v1]),np.dot(v0,v1)) #radian
+        return np.degrees(angle) #degree
+        
     
         
         

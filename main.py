@@ -40,7 +40,8 @@ def game_loop():
         display = pygame.display.set_mode((1280, 720),pygame.HWSURFACE | pygame.DOUBLEBUF)
         hud = HUD(1280, 720)
         #env = CarEnv()
-        env = World(client.load_world('Town06'), hud)
+        world = client.load_world('Town06')
+        env = World(world, hud)
         #env = World(client.get_world(), hud)
         player = env.player
         car1 = env.car1
@@ -50,12 +51,13 @@ def game_loop():
         dest = carla.Transform(carla.Location(x=8.4, y=205.1, z= 0.0))
         #agent.set_destination((spawn_point.location.x,spawn_point.location.y,spawn_point.location.z))
         agent.set_destination((dest.location.x,dest.location.y,dest.location.z))
-        highlevel_sc = HighLevelSC()
+        highlevel_sc = HighLevelSC(world)
         prev_action = None
         action = None 
         run = True
         clock = pygame.time.Clock()
         while run:
+                
                 env.tick(clock)
                 env.render(display)
                 pygame.display.flip()
@@ -70,7 +72,6 @@ def game_loop():
                 car1_obs = highlevel_sc.get_obs(car1)
                 dist = highlevel_sc.euclidean_dist(player_obs,car1_obs)
                 ref = highlevel_sc.get_xy_ref(player)
-                print(ref)
                 #print(dist)
                 #control = agent.run_step()
                 action = highlevel_sc.safe_action(dist)
