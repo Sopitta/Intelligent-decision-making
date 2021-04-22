@@ -71,7 +71,7 @@ class HighLevelSC(object):
         #get player's current location.
         cur_t = player.get_transform()
         #the reference is in front of the player
-        ref_xy = np.array((cur_t.location.x-5,cur_t.location.y))
+        ref_xy = np.array((cur_t.location.x-10,cur_t.location.y))
         
         return ref_xy
     
@@ -87,34 +87,23 @@ class HighLevelSC(object):
         player_xy = np.array((cur_t.location.x,cur_t.location.y))
         return player_xy
     
-    def get_xy_car1(self, car1):
+    def get_xy_car(self, car):
         '''
         player: a player, type carla.Vehicle
         return: 
         ref_wp :a carla waypoint that is used as a reference point in angle calculation
         '''
         #get player's current location.
-        cur_t = car1.get_transform()
+        cur_t = car.get_transform()
         #the reference is in front of the player
-        car1_xy = np.array((cur_t.location.x,cur_t.location.y))
-        return car1_xy
+        car_xy = np.array((cur_t.location.x,cur_t.location.y))
+        return car_xy
     
-    def get_xy_car2(self, car2):
-        '''
-        player: a player, type carla.Vehicle
-        return: 
-        ref_wp :a carla waypoint that is used as a reference point in angle calculation
-        '''
-        #get player's current location.
-        cur_t = car2.get_transform()
-        #the reference is in front of the player
-        car2_xy = np.array((cur_t.location.x,cur_t.location.y))
-        return car2_xy
     
-    def get_theta_car1(self,ref_xy,car_xy,player):
+    def get_theta_car(self,ref_xy,car_xy,player_xy):
         
-        v0 = car_xy - ref_xy
-        v1 = player - ref_xy
+        v0 = ref_xy - car_xy
+        v1 = ref_xy - player_xy
         angle = np.math.atan2(np.linalg.det([v0,v1]),np.dot(v0,v1)) #radian
         return np.degrees(angle) #degree
         

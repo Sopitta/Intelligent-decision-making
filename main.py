@@ -72,10 +72,13 @@ def game_loop():
                 car1_obs = highlevel_sc.get_obs(car1)
                 dist = highlevel_sc.euclidean_dist(player_obs,car1_obs)
                 ref = highlevel_sc.get_xy_ref(player)
-                #print(dist)
-                #control = agent.run_step()
+                player_xy = highlevel_sc.get_xy_player(player)
+                car1_xy = highlevel_sc.get_xy_car(car1)
+                theta = highlevel_sc.get_theta_car(ref,car1_xy,player_xy)
+                print(theta)
+                control = agent.run_step()
                 action = highlevel_sc.safe_action(dist)
-                control = agent.run_step2(action,prev_action)
+                #control = agent.run_step2(action,prev_action)
                 player.apply_control(control)
                 prev_action = action
             #except KeyboardInterrupt:

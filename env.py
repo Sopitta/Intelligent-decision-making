@@ -104,7 +104,7 @@ class CarEnv(object):
             self.destroy()
         self.car1 = self.world.spawn_actor(vehicle_bp, self.transform1)
         #self.car1.set_autopilot(True)
-        self.car1.apply_control(carla.VehicleControl(throttle=0.35, steer=0))
+        #self.car1.apply_control(carla.VehicleControl(throttle=0.1, steer=0))
         self.actor_list.append(self.car1)
         #self.rgb_cam = RGBCamera(self.car1)
         print(self.car1)
@@ -154,7 +154,7 @@ class World(object):
         #self.transform = self.map.get_spawn_points()[254]
         #self.transform = carla.Transform(carla.Location(x=162.2, y=-180.2, z= -0), carla.Rotation(yaw=-147.6))
         #self.transform = carla.Transform(carla.Location(x=-14.4, y=-207.3, z= 0.3), carla.Rotation(yaw=270))
-        self.transform = carla.Transform(carla.Location(x=581.6, y=-17.2, z=30),carla.Rotation(yaw=-180)) #map6
+        self.transform = carla.Transform(carla.Location(x=581.6, y=-17.2, z=10),carla.Rotation(yaw=-180)) #map6
         #print(self.transform)
         if self.player is not None:
             self.destroy()
@@ -170,13 +170,16 @@ class World(object):
             vehicle_bp = random.choice(self.world.get_blueprint_library().filter('vehicle.*'))
         #self.transform1 = carla.Transform(carla.Location(x=52.3, y=205.3, z= 30.0), carla.Rotation(yaw=0))
         #self.transform1 = carla.Transform(carla.Location(x=52.3, y=205.3, z= 30.0))
-        self.transform1 = carla.Transform(carla.Location(x=530.9, y=-13.9, z= 30.0),carla.Rotation(yaw=-180)) #map6
+        #self.transform1 = carla.Transform(carla.Location(x=530.9, y=-13.9, z= 10.0),carla.Rotation(yaw=-180)) #map6,left
+        #self.transform1 = carla.Transform(carla.Location(x=530.9, y=-17.2, z= 10.0),carla.Rotation(yaw=-180))
+        self.transform1 = carla.Transform(carla.Location(x=530.9, y=-20.3, z= 10.0),carla.Rotation(yaw=-180))
+        
         #self.transform1 = self.map.get_spawn_points()[234]
         if self.car1 is not None:
             self.destroy()
         self.car1 = self.world.spawn_actor(vehicle_bp, self.transform1)
-        self.car1.set_autopilot(True)
-        #self.car1.apply_control(carla.VehicleControl(throttle=0.35, steer=0))
+        #self.car1.set_autopilot(True)
+        self.car1.apply_control(carla.VehicleControl(throttle=0.35, steer=0))
         self.actor_list.append(self.car1)
         print(self.car1)
         
