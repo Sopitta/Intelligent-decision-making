@@ -79,6 +79,10 @@ class Agent:
     def run_step2(self,action,prevaction):
         control = self.local_plan.run_step2(action,prevaction)
         return control
+
+    def run_step3(self,action,prevaction):
+        control = self.local_plan.run_step3(action,prevaction)
+        return control
     
     
     

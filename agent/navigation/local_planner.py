@@ -375,6 +375,102 @@ class LocalPlanner(object):
         
         
         return control
+
+    def run_step3(self, action,prevaction,debug=False):
+        """
+        Execute one step of local planning which involves running the longitudinal and lateral PID controllers to
+        follow the waypoints trajectory.
+
+        :param debug: boolean flag to activate waypoints debugging
+        :return: control to be applied
+        """
+        
+        # not enough waypoints in the horizon? => add more!
+        #if not self._global_plan and len(self._waypoints_queue) < int(self._waypoints_queue.maxlen * 0.5):
+        #    self._compute_next_waypoints(k=100)
+       
+        buffer_old_len = self.buffer_old
+        if len(self._waypoints_queue) == 0 and len(self._waypoint_buffer) == 0:
+            control = carla.VehicleControl()
+            control.steer = 0.0
+            control.throttle = 0.0
+            control.brake = 1.0
+            control.hand_brake = False
+            control.manual_gear_shift = False
+
+            return control
+
+        #   Buffering the waypoints
+        if not self._waypoint_buffer:
+            for _ in range(self._buffer_size):
+                if self._waypoints_queue:
+                    self._waypoint_buffer.append(
+                        self._waypoints_queue.popleft())
+                else:
+                    break
+        #if some conditions are true; manipulate the whole wp buffer.
+        buffer_len = len(self._waypoint_buffer)
+        #print(buffer_len)
+        if prevaction!= None and prevaction != action and action != 1:
+            self.n_modify_wp = 22
+            self.action_list = []
+        
+        
+        # current vehicle waypoint
+        vehicle_transform = self._vehicle.get_transform()
+        self._current_waypoint = self._map.get_waypoint(vehicle_transform.location)
+        # target waypoint
+        self.target_waypoint_initial, self._target_road_option = self._waypoint_buffer[0]
+        self.target_waypoint_modified = self.target_waypoint_initial
+
+        if self.n_modify_wp > 0 : 
+            #action_list = []
+            if action == 2: #change left
+                new_wp = self.target_waypoint_initial.get_left_lane()
+            if action == 3: #change right
+                new_wp = self.target_waypoint_initial.get_right_lane()
+            self.action_list.append(action)
+            #print(self.action_list)
+            if action == 1:
+                if self.action_list[0] == 2:
+                    new_wp = self.target_waypoint_initial.get_left_lane()
+                if self.action_list[0] == 3:
+                    new_wp = self.target_waypoint_initial.get_right_lane()
+
+
+            self.target_waypoint_modified = new_wp
+            if buffer_len!=buffer_old_len:
+                self.n_modify_wp  = self.n_modify_wp - 1
+            
+        if self.n_modify_wp == 0:
+            self.action_list = []
+            #print('current wp ', self._current_waypoint )
+            #print(self.target_waypoint_initial, "    ", self.target_waypoint_modified)
+            
+            
+        # move using PID controllers 
+        control = self._vehicle_controller.run_step(self._target_speed, self.target_waypoint_modified)
+        #control = self._vehicle_controller.run_step(self._target_speed, self.target_waypoint_initial)
+        
+        
+
+        # purge the queue of obsolete waypoints
+        max_index = -1
+
+        for i, (waypoint, _) in enumerate(self._waypoint_buffer):
+            if waypoint.transform.location.distance(vehicle_transform.location) < self._min_distance:
+                max_index = i
+        if max_index >= 0:
+            for i in range(max_index + 1):
+                self._waypoint_buffer.popleft()
+    
+        if debug:
+            draw_waypoints(self._vehicle.get_world(), [self.target_waypoint], self._vehicle.get_location().z + 1.0)
+        
+        self.buffer_old = buffer_len
+        
+        
+        return control
     
 
     def done(self):
@@ -405,7 +501,6 @@ def _retrieve_options(list_waypoints, current_waypoint):
         options.append(link)
 
     return options
-
 
 def _compute_connection(current_waypoint, next_waypoint, threshold=35):
     """
