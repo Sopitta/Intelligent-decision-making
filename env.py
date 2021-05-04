@@ -129,6 +129,7 @@ class World(object):
         self.car1 = None
         self.car2 = None
         self.car3 = None
+        self.car4 = None
         self.camera_manager = None
         self.hud = hud
         self._gamma = 2.2
@@ -153,19 +154,23 @@ class World(object):
         #self.transform = self.map.get_spawn_points()[254]
         #self.transform = carla.Transform(carla.Location(x=162.2, y=-180.2, z= -0), carla.Rotation(yaw=-147.6))
         #self.transform = carla.Transform(carla.Location(x=-14.4, y=-207.3, z= 0.3), carla.Rotation(yaw=270))
-        self.transform = carla.Transform(carla.Location(x=581.6, y=-13.8, z=10),carla.Rotation(yaw=-180)) #map6
+        self.transform = carla.Transform(carla.Location(x=581.6, y=-17.2, z=10),carla.Rotation(yaw=-180)) #map6
         if self.player is not None:
             self.destroy()
         self.player = self.world.spawn_actor(model_3, self.transform)
         self.actor_list.append(self.player)
         print(self.player)
-        '''
+
+        
         #car1
-        vehicle_bp = random.choice(self.world.get_blueprint_library().filter('vehicle.*'))
-        while not vehicle_bp.has_attribute('number_of_wheels') or not int(vehicle_bp.get_attribute('number_of_wheels')) == 4:
-            vehicle_bp = random.choice(self.world.get_blueprint_library().filter('vehicle.*'))
+        
+        #vehicle_bp = random.choice(self.world.get_blueprint_library().filter('vehicle.*'))
+        #while not vehicle_bp.has_attribute('number_of_wheels') or not int(vehicle_bp.get_attribute('number_of_wheels')) == 4:
+        #   vehicle_bp = random.choice(self.world.get_blueprint_library().filter('vehicle.*'))
+        
         #self.transform1 = carla.Transform(carla.Location(x=530.9, y=-13.9, z= 10.0),carla.Rotation(yaw=-180)) #map6,left
-        self.transform1 = carla.Transform(carla.Location(x=530.9, y=-17.2, z= 10.0),carla.Rotation(yaw=-180))
+        vehicle_bp = self.world.get_blueprint_library().filter("mercedes-benz")[0]
+        self.transform1 = carla.Transform(carla.Location(x=540.9, y=-17.2, z= 10.0),carla.Rotation(yaw=-180))
         #self.transform1 = carla.Transform(carla.Location(x=530.9 , y=-13.8, z= 10.0),carla.Rotation(yaw=-180))
         
         if self.car1 is not None:
@@ -175,11 +180,14 @@ class World(object):
         self.car1.apply_control(carla.VehicleControl(throttle=0.35, steer=0))
         self.actor_list.append(self.car1)
         print(self.car1)
-        '''
+        
+        
+
+        
         #car2
         vehicle_bp2 = self.world.get_blueprint_library().filter("mercedes-benz")[0]
-        self.transform2 = carla.Transform(carla.Location(x=530.9 , y=-13.8, z= 10.0),carla.Rotation(yaw=-180))
-        
+        #self.transform2 = carla.Transform(carla.Location(x=500.9 , y=-13.8, z= 10.0),carla.Rotation(yaw=-180))
+        self.transform2 = carla.Transform(carla.Location(x=500.9 , y=-13.8, z= 10.0),carla.Rotation(yaw=-180))
         if self.car2 is not None:
             self.destroy()
         self.car2 = self.world.spawn_actor(vehicle_bp2, self.transform2)
@@ -187,7 +195,9 @@ class World(object):
         self.car2.apply_control(carla.VehicleControl(throttle=0.35, steer=0))
         self.actor_list.append(self.car2)
         print(self.car2)
+        
 
+        '''
          #car3
         vehicle_bp3 = self.world.get_blueprint_library().filter("mercedes-benz")[0] #t2 model can go fat
         self.transform3 = carla.Transform(carla.Location(x=550 , y=-20.7, z= 10.0),carla.Rotation(yaw=-180))
@@ -195,10 +205,19 @@ class World(object):
         if self.car3 is not None:
             self.destroy()
         self.car3 = self.world.spawn_actor(vehicle_bp3, self.transform3)
-        #self.car1.set_autopilot(True)
         self.car3.apply_control(carla.VehicleControl(throttle=0.35, steer=0))
         self.actor_list.append(self.car3)
         print(self.car3)
+        '''
+        #car4
+        vehicle_bp4 = self.world.get_blueprint_library().filter("toyota")[0]
+        self.transform4 = carla.Transform(carla.Location(x=500.9, y=-17.2, z= 10.0),carla.Rotation(yaw=-180))
+        if self.car4 is not None:
+            self.destroy()
+        self.car4 = self.world.spawn_actor(vehicle_bp4, self.transform4)
+        self.car4.apply_control(carla.VehicleControl(throttle=0.35, steer=0))
+        self.actor_list.append(self.car4)
+        print(self.car4)
 
 
         cam_index = self.camera_manager.index if self.camera_manager is not None else 0

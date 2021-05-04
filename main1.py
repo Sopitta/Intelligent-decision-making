@@ -45,6 +45,7 @@ def game_loop():
         car1 = env.car1
         car2 = env.car2
         car3 = env.car3
+        car4 = env.car4
         agent = Agent(player)
         spawn_point = env.map.get_spawn_points()[0]
         #dest = carla.Transform(carla.Location(x=150, y=-193.3, z= 0.27530714869499207))
@@ -61,8 +62,8 @@ def game_loop():
                 env.tick(clock)
                 env.render(display)
                 pygame.display.flip()
-                highlevel_sc.count_car(car1,car2,car3)
-                action = highlevel_sc.get_action(player,car1,car2,car3)
+                highlevel_sc.count_car(car1,car2,car3,car4)
+                action = highlevel_sc.get_action(player,car1,car2,car3,car4)
                 #print(action)
                 #control = agent.run_step()
                 
