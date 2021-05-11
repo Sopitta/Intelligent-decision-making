@@ -260,6 +260,14 @@ class World(object):
             if actor is not None:
                 actor.destroy()
 
+    def step(self):
+        """apply steer and throttle from Reinforcement learning"""
+        steer = 0
+        throttle = 0
+        control = carla.VehicleControl(throttle=throttle, steer=steer)
+        self.apply.apply_control(control)
+        
+
 
 
 '''
