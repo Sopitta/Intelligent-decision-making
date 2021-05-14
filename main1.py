@@ -70,6 +70,9 @@ def game_loop():
                 control = agent.run_step3(action,prev_action)
                 player.apply_control(control)
                 prev_action = action
+
+                bev_pic = env.process_bev()
+                print(bev_pic.shape)
            
     finally:
         #if  env is not None:

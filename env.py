@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 
 import carla
 from carla import ColorConverter as cc
-
+from carla_birdeye_view import BirdViewProducer, BirdViewCropType, PixelDimensions
 def process_ods(event):
     other = event.other_actor #carla.Actor
     if "vehicle" in other.type_id:
@@ -230,6 +230,14 @@ class World(object):
         actor_type = get_actor_display_name(self.player)
         self.hud.notification(actor_type)
         #pygame.quit()
+
+        #bird eye view
+        self.birdview_producer = BirdViewProducer(
+        self.player,  # carla.Client
+        target_size=PixelDimensions(width=150, height=336),
+        pixels_per_meter=4,
+        crop_type=BirdViewCropType.FRONT_AND_REAR_AREA
+)
         
     def tick(self, clock):
         """Method for every tick"""
@@ -266,6 +274,14 @@ class World(object):
         throttle = 0
         control = carla.VehicleControl(throttle=throttle, steer=steer)
         self.apply.apply_control(control)
+
+    def process_bev(self):
+        """process bird eye views images"""
+        birdview = self.birdview_producer.produce(
+        agent_vehicle=self.player)  # carla.Actor (spawned vehicle)
+        return birdview
+
+
         
 
 
