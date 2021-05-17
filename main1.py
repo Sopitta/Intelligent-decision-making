@@ -21,7 +21,8 @@ except IndexError:
     pass
 
 import carla
-from env import CarEnv, World, HUD
+#from env import CarEnv, World, HUD
+from Env.env_v1 import World, HUD
 from agent.myagent import Agent
 from high_level_sc import HighLevelSC
 
@@ -71,8 +72,8 @@ def game_loop():
                 player.apply_control(control)
                 prev_action = action
 
-                bev_pic = env.process_bev()
-                print(bev_pic.shape)
+                #bev_pic = env.process_bev()
+                #print(bev_pic.shape)
            
     finally:
         #if  env is not None:
