@@ -24,6 +24,8 @@ import matplotlib.pyplot as plt
 import carla
 from carla import ColorConverter as cc
 from carla_birdeye_view import BirdViewProducer, BirdViewCropType, PixelDimensions
+from RL.myRL import RL
+
 def process_ods(event):
     other = event.other_actor #carla.Actor
     if "vehicle" in other.type_id:
@@ -41,12 +43,15 @@ class World(object):
         self.car3 = None
         self.car4 = None
         self.camera_manager = None
+        self.collision_sensor = None
         self.hud = hud
         self.actor_list = []
         self._gamma = 2.2
         self.cumulative_reward = 0.0
-        self.step = 0.0
+        self.steps = 0.0
         self.episode = 0.0
+        self.collision_hist = []
+        self.RL = RL()
 
         self.reset()
         
@@ -54,6 +59,7 @@ class World(object):
     def reset(self):
         
         self.actor_list = []
+        self.collision_hist = []
         self.cumulative_reward = 0.0
         self.step = 0.0
         self.episode = 0.0
@@ -138,6 +144,9 @@ class World(object):
         pixels_per_meter=4,
         crop_type=BirdViewCropType.FRONT_AND_REAR_AREA)
 
+        #collision sensor
+        self.collision_sensor = CollisionSensor(self.player, self.hud)
+
     def tick(self, clock):
         """Method for every tick"""
         self.hud.tick(self, clock)
@@ -160,25 +169,54 @@ class World(object):
     def destroy(self):
         """Destroys all actors"""
         actors = [
-            self.camera_manager.sensor,
+            self.camera_manager.sensor, self.collision_sensor.sensor, 
             self.car1, self.car2, self.car3, self.car4,
             self.player]
         for actor in actors:
             if actor is not None:
                 actor.destroy()
 
-    def step(self):
+    def RL_step(self):
         """apply steer and throttle from Reinforcement learning"""
+        
+        player_state = self.get_state(self.player)
+        done,reward = self.RL.cal_reward(self.collision_hist,player_state)
+        print(player_state)
         steer = 0
         throttle = 0
-        control = carla.VehicleControl(throttle=throttle, steer=steer)
-        self.apply.apply_control(control)
+        #control = carla.VehicleControl(throttle=throttle, steer=steer)
+        #self.apply.apply_control(control)
+        return done,reward
 
     def process_bev(self):
         """process bird eye views images"""
         birdview = self.birdview_producer.produce(
         agent_vehicle=self.player)  # carla.Actor (spawned vehicle)
         return birdview
+
+    def get_state(self, car):
+        '''
+        car:carla.Actor, type carla.Vehicle
+        return: State of the car 
+        
+        '''
+        loc_xyz = car.get_location()
+        t = car.get_transform()
+        a_xyz = car.get_acceleration() #m/s2^2
+        v_xyz = car.get_velocity() #m/s
+        heading_rad = t.rotation.yaw * (np.pi/180) #rad
+        v_ms = math.sqrt(v_xyz.x**2 + v_xyz.z**2 + v_xyz.z**2)
+        x = loc_xyz.x
+        y = loc_xyz.y
+        
+        return [x,y,heading_rad,v_ms]
+
+
+
+    #get car state
+    #get obs for RL (for example,images)
+    #
+
 
 
 '''
@@ -363,6 +401,47 @@ class CameraManager(object):
             self.surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
         if self.recording:
             image.save_to_disk('_out/%08d' % image.frame)  
+
+
+# ==============================================================================
+# -- CollisionSensor -----------------------------------------------------------
+# ==============================================================================
+
+
+class CollisionSensor(object):
+    def __init__(self, parent_actor, hud):
+        self.sensor = None
+        self.history = []
+        self.collision_hist = []
+        self._parent = parent_actor
+        self.hud = hud
+        world = self._parent.get_world()
+        bp = world.get_blueprint_library().find('sensor.other.collision')
+        self.sensor = world.spawn_actor(bp, carla.Transform(), attach_to=self._parent)
+        # We need to pass the lambda a weak reference to self to avoid circular
+        # reference.
+        weak_self = weakref.ref(self)
+        self.sensor.listen(lambda event: CollisionSensor._on_collision(weak_self, event))
+
+    def get_collision_history(self):
+        history = collections.defaultdict(int)
+        for frame, intensity in self.history:
+            history[frame] += intensity
+        return history
+
+    @staticmethod
+    def _on_collision(weak_self, event):
+        self = weak_self()
+        if not self:
+            return
+        actor_type = get_actor_display_name(event.other_actor)
+        self.hud.notification('Collision with %r' % actor_type)
+        impulse = event.normal_impulse
+        intensity = math.sqrt(impulse.x**2 + impulse.y**2 + impulse.z**2)
+        self.collision_hist.append(event)
+        self.history.append((event.frame, intensity))
+        if len(self.history) > 4000:
+            self.history.pop(0)
             
             
 # ==============================================================================

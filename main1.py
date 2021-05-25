@@ -67,7 +67,7 @@ def game_loop():
                 action = highlevel_sc.get_action(player,car1,car2,car3,car4)
                 #print(action)
                 #control = agent.run_step()
-                
+                print(env.RL_step())
                 control = agent.run_step3(action,prev_action)
                 player.apply_control(control)
                 prev_action = action
