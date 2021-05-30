@@ -25,7 +25,7 @@ import carla
 from Env.env_v1 import World, HUD
 from agent.myagent import Agent
 from high_level_sc import HighLevelSC
-
+from stable_baselines import DQN #get action from DQN and evn.step(action)
 
 
 
@@ -34,6 +34,9 @@ def game_loop():
     env = None
     pygame.init()
     pygame.font.init()
+    train = False
+    training_number = 4
+    train_time_step = 12000000
     
     try:
         client = carla.Client("localhost", 2000)

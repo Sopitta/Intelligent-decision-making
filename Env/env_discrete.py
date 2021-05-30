@@ -25,19 +25,42 @@ import carla
 from carla import ColorConverter as cc
 from carla_birdeye_view import BirdViewProducer, BirdViewCropType, PixelDimensions
 from RL.myRL import RL
+import gym
+from gym import spaces
+from stable_baselines.common.env_checker import check_env
 
-
+'''
 def process_ods(event):
     other = event.other_actor #carla.Actor
     if "vehicle" in other.type_id:
         dist = event.distance
         print("distance from the front car is" + str(dist))
         return dist
+'''
  
-class World(object):    
-    def __init__(self, carla_world, hud):
-        self.world = carla_world
+class World(gym.Env):    
+    def __init__(self):
+
+        super(World, self).__init__()
+        
+        client = carla.Client("localhost", 2000)
+        client.set_timeout(4.0)
+        pygame.init()
+        pygame.font.init()
+
+        hud = HUD(1280, 720)
+        self.world = client.load_world('Town06')
         self.map = self.world.get_map()
+
+
+        self.action_space = spaces.Discrete(3)
+
+        self.observation_space = spaces.Box(
+            low=-np.inf, 
+            high=np.inf, 
+            shape=(9,336,150), 
+            dtype=np.float32)
+
         self.player = None
         self.car1 = None
         self.car2 = None
@@ -49,12 +72,36 @@ class World(object):
         self.actor_list = []
         self._gamma = 2.2
         self.cumulative_reward = 0.0
-        self.steps = 0.0
+        self.total_step = 0.0
         self.episode = 0.0
+        self.STEER_AMT = 1.0
         self.collision_hist = []
         self.RL = RL()
 
-        self.reset()
+        #pygame
+        self.display = pygame.display.set_mode((1280, 720),pygame.HWSURFACE | pygame.DOUBLEBUF)
+        self.clock = pygame.time.Clock()
+
+    def step(self,action):
+        """apply steer and throttle from Reinforcement learning"""
+        
+        player_state = self.get_state(self.player)
+        done,reward = self.RL.cal_reward(self.collision_hist,player_state)
+        #print(player_state)
+        obs = self.process_bev()
+        info = dict()
+        if action == 0:
+            self.player.apply_control(carla.VehicleControl(throttle=1.0, steer=-1*self.STEER_AMT))
+        elif action == 1:
+            self.player.apply_control(carla.VehicleControl(throttle=1.0, steer= 0))
+        elif action == 2:
+            self.player.apply_control(carla.VehicleControl(throttle=1.0, steer=1*self.STEER_AMT))
+
+        #steer = 0
+        #throttle = 0
+        #control = carla.VehicleControl(throttle=throttle, steer=steer)
+        #self.apply.apply_control(control)
+        return obs, reward, done, info
         
         
     def reset(self):
@@ -62,13 +109,18 @@ class World(object):
         self.actor_list = []
         self.collision_hist = []
         self.cumulative_reward = 0.0
-        self.step = 0.0
+        self.total_step = 0.0
         self.episode = 0.0
         self.spawn_player()
         self.spawn_others()
         self.spawn_sensors()
         actor_type = get_actor_display_name(self.player)
         self.hud.notification(actor_type)
+
+        # return obsrevation
+        obs = self.process_bev()
+        #print(obs.shape)
+        return obs
        
 
     def spawn_player(self):
@@ -177,18 +229,7 @@ class World(object):
             if actor is not None:
                 actor.destroy()
 
-    def RL_step(self):
-        """apply steer and throttle from Reinforcement learning"""
-        
-        player_state = self.get_state(self.player)
-        done,reward = self.RL.cal_reward(self.collision_hist,player_state)
-        #print(player_state)
-        obs = self.process_bev(self)
-        steer = 0
-        throttle = 0
-        #control = carla.VehicleControl(throttle=throttle, steer=steer)
-        #self.apply.apply_control(control)
-        return obs,done,reward
+    
 
     def process_bev(self):
         """process bird eye views images"""
@@ -196,7 +237,7 @@ class World(object):
         agent_vehicle=self.player)  # carla.Actor (spawned vehicle)
 
         # produces np.ndarray of shape (height, width, 3)
-        rgb = self.birdview_producer.as_rgb(birdview)
+        #rgb = self.birdview_producer.as_rgb(birdview)
         return birdview
 
     def get_state(self, car):

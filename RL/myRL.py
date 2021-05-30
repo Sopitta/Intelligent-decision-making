@@ -25,6 +25,8 @@ class RL(object):
 
 		#self.cumulative_reward = self.cumulative_reward+self.reward
 		return self.done,self.reward
+
+
 			
 	#if collision -1000, else 1
 
