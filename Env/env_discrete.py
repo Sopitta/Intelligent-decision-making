@@ -58,9 +58,10 @@ class World(gym.Env):
         self.observation_space = spaces.Box(
             low=-np.inf, 
             high=np.inf, 
-            shape=(9,336,150), 
+            #shape=(9,336,150), 
+            shape = (453600,),
             dtype=np.float32)
-
+        
         self.player = None
         self.car1 = None
         self.car2 = None
@@ -72,8 +73,8 @@ class World(gym.Env):
         self.actor_list = []
         self._gamma = 2.2
         self.cumulative_reward = 0.0
-        self.total_step = 0.0
-        self.episode = 0.0
+        self.total_step = 0
+        self.episode = 0
         self.STEER_AMT = 1.0
         self.collision_hist = []
         self.RL = RL()
@@ -84,7 +85,11 @@ class World(gym.Env):
 
     def step(self,action):
         """apply steer and throttle from Reinforcement learning"""
-        
+        print('stepping')
+        #print(self.camera_manager.sensor)
+        self.tick(self.clock)
+        self.render(self.display)
+        pygame.display.flip()
         player_state = self.get_state(self.player)
         done,reward = self.RL.cal_reward(self.collision_hist,player_state)
         #print(player_state)
@@ -96,16 +101,25 @@ class World(gym.Env):
             self.player.apply_control(carla.VehicleControl(throttle=1.0, steer= 0))
         elif action == 2:
             self.player.apply_control(carla.VehicleControl(throttle=1.0, steer=1*self.STEER_AMT))
+        if self.total_step == 10:
+            done = True
+        print(done)
+        if done == True:
+            self.episode == self.episode + 1
+            self.destroy()
 
         #steer = 0
         #throttle = 0
         #control = carla.VehicleControl(throttle=throttle, steer=steer)
         #self.apply.apply_control(control)
+        self.total_step = self.total_step+1
+        #print(action)
         return obs, reward, done, info
         
         
     def reset(self):
-        
+        print('resetting')
+        #self.destroy()
         self.actor_list = []
         self.collision_hist = []
         self.cumulative_reward = 0.0
@@ -128,7 +142,7 @@ class World(gym.Env):
         model_3 = self.world.get_blueprint_library().filter("model3")[0]
         self.transform = carla.Transform(carla.Location(x=581.6, y=-17.2, z=10),carla.Rotation(yaw=-180)) #map6
         if self.player is not None:
-            self.destroy()
+            self.player.destroy()
         self.player = self.world.spawn_actor(model_3, self.transform)
         self.actor_list.append(self.player)
         print(f'Player model is {self.player}.')
@@ -141,7 +155,7 @@ class World(gym.Env):
         vehicle_bp = self.world.get_blueprint_library().filter("mercedes-benz")[0]
         self.transform1 = carla.Transform(carla.Location(x=540.9, y=-17.2, z= 10.0),carla.Rotation(yaw=-180))
         if self.car1 is not None:
-            self.destroy()
+            self.car1.destroy()
         self.car1 = self.world.spawn_actor(vehicle_bp, self.transform1)
         #self.car1.set_autopilot(True)
         self.car1.apply_control(carla.VehicleControl(throttle=0.35, steer=0))
@@ -152,7 +166,7 @@ class World(gym.Env):
         vehicle_bp2 = self.world.get_blueprint_library().filter("mercedes-benz")[0]
         self.transform2 = carla.Transform(carla.Location(x=500.9 , y=-13.8, z= 10.0),carla.Rotation(yaw=-180))
         if self.car2 is not None:
-            self.destroy()
+            self.car2.destroy()
         self.car2 = self.world.spawn_actor(vehicle_bp2, self.transform2)
         #self.car1.set_autopilot(True)
         self.car2.apply_control(carla.VehicleControl(throttle=0.35, steer=0))
@@ -165,7 +179,7 @@ class World(gym.Env):
         self.transform3 = carla.Transform(carla.Location(x=550 , y=-20.7, z= 10.0),carla.Rotation(yaw=-180))
         
         if self.car3 is not None:
-            self.destroy()
+            self.car3.destroy()
         self.car3 = self.world.spawn_actor(vehicle_bp3, self.transform3)
         self.car3.apply_control(carla.VehicleControl(throttle=0.35, steer=0))
         self.actor_list.append(self.car3)
@@ -175,7 +189,7 @@ class World(gym.Env):
         vehicle_bp4 = self.world.get_blueprint_library().filter("toyota")[0]
         self.transform4 = carla.Transform(carla.Location(x=500.9, y=-17.2, z= 10.0),carla.Rotation(yaw=-180))
         if self.car4 is not None:
-            self.destroy()
+            self.car4.destroy()
         self.car4 = self.world.spawn_actor(vehicle_bp4, self.transform4)
         self.car4.apply_control(carla.VehicleControl(throttle=0.35, steer=0))
         self.actor_list.append(self.car4)
@@ -184,6 +198,9 @@ class World(gym.Env):
     def spawn_sensors(self):
         """spawn sensors to the env"""
         #camera manager
+        print('spawning sensors')
+        if self.camera_manager is not None:
+            self.camera_manager.sensor.destroy()
         cam_index = self.camera_manager.index if self.camera_manager is not None else 0
         cam_pos_id = self.camera_manager.transform_index if self.camera_manager is not None else 0
         self.camera_manager = CameraManager(self.player, self.hud, self._gamma)
@@ -198,6 +215,8 @@ class World(gym.Env):
         crop_type=BirdViewCropType.FRONT_AND_REAR_AREA)
 
         #collision sensor
+        if self.collision_sensor is not None:
+            self.collision_sensor.sensor.destroy()
         self.collision_sensor = CollisionSensor(self.player, self.hud)
 
     def tick(self, clock):
@@ -206,6 +225,7 @@ class World(gym.Env):
 
     def render(self, display):
         """Render world"""
+        print('rendering')
         self.camera_manager.render(display)
         self.hud.render(display)
     '''    
@@ -221,13 +241,15 @@ class World(gym.Env):
     '''
     def destroy(self):
         """Destroys all actors"""
-        actors = [
-            self.camera_manager.sensor, self.collision_sensor.sensor, 
-            self.car1, self.car2, self.car3, self.car4,
-            self.player]
-        for actor in actors:
-            if actor is not None:
-                actor.destroy()
+        sensors = [self.camera_manager, self.collision_sensor]
+        cars = [self.car1, self.car2, self.car3, self.car4,self.player]
+        for s in sensors:
+            if s is not None:
+                s.sensor.destroy()
+        for c in cars:
+            if c is not None:
+                c.destroy()
+        
 
     
 
@@ -238,7 +260,10 @@ class World(gym.Env):
 
         # produces np.ndarray of shape (height, width, 3)
         #rgb = self.birdview_producer.as_rgb(birdview)
-        return birdview
+        obs = birdview.flatten()
+        print(obs.shape)
+
+        return obs
 
     def get_state(self, car):
         '''

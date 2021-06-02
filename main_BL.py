@@ -25,11 +25,37 @@ import carla
 from Env.env_discrete import World, HUD
 from agent.myagent import Agent
 from high_level_sc import HighLevelSC
-#from stable_baselines import DQN #get action from DQN and evn.step(action)
+from stable_baselines import DQN #get action from DQN and evn.step(action)
 from stable_baselines.common.env_checker import check_env
 
+
+train = True
+training_number = 4
+train_time_step = 12000000
+method = 'dqn'
+log_fold = "./sopitta_logs_{}/".format(method)
+model_name = "./sopitta_logs_{}/{}_{}".format(method, method, training_number)
+log_name = "log_{}_{}".format(method, training_number)
 env = World()
-check_env(env)
+if train:
+        # TRAIN
+        model = DQN('MlpPolicy', env, verbose=1, tensorboard_log=log_fold)
+        model.learn(total_timesteps=train_time_step, tb_log_name=log_name)
+        model.save(model_name)
+        print('Done training')
+
+else:
+        # EVALUATE
+        model = DQN.load(model_name)
+        obs = env.reset()
+        for i in range(eval_range):
+            action, _states = model.predict(obs)
+            obs, reward, done, info = env.step(action)
+            if done:
+                obs = env.reset()
+        print('Done evaluation')
+
+#check_env(env)
 
         
     

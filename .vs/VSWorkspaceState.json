@@ -1,11 +1,8 @@
 {
   "ExpandedNodes": [
     "",
-    "\\agent",
-    "\\agent\\navigation",
     "\\Env",
     "\\RL"
   ],
-  "SelectedNode": "\\RL\\myRL.py",
   "PreviewInSolutionExplorer": false
 }
