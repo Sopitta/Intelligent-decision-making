@@ -81,8 +81,6 @@ class LocalPlanner(object):
         self._waypoints_queue = deque(maxlen=20000)
         self._buffer_size = 5
         self._waypoint_buffer = deque(maxlen=self._buffer_size)
-        self.waypoints_RL_queue = deque(maxlen=10) #additional queue for RL waypoints
-        self.waypoints_RL_list = []
 
         # initializing controller
         self._init_controller(opt_dict)
@@ -578,41 +576,18 @@ class LocalPlanner(object):
         
         
         return control
+    def run_RL(action):
 
-    def run_RL(self, action):
-        """
-        Execute the action from RL policy
-        This function will be reached only when the safety control allows it.
-        """
         # current vehicle waypoint
-        #self.waypoints_RL_list = []
+        self.waypoints_RL_queue = deque(maxlen=10)
         vehicle_transform = self._vehicle.get_transform()
-        current_waypoint = self._map.get_waypoint(vehicle_transform.location)
+        self._current_waypoint = self._map.get_waypoint(vehicle_transform.location)
         
-        if len(self.waypoints_RL_list)== 0 : 
-            if action == 0 : #stay
-                self.waypoints_RL_list  = current_waypoint.next(7)
-            elif action  == 1 : #go left
-                current_waypoint_left = current_waypoint.get_left_lane()
-                self.waypoints_RL_list = current_waypoint_left.next(7)
-            elif action  == 2 : #go right
-                current_waypoint_right = current_waypoint.get_right_lane()
-                self.waypoints_RL_list = current_waypoint_right.next(7)
-        
-       
-        
-        target_waypoint = self.waypoints_RL_list[0]
-        control = self._vehicle_controller.run_step(self._target_speed, target_waypoint)
-        print(len(self.waypoints_RL_list))    
+        if action == 0 : #stay
+            self._current_waypoint.next(3)
             
-            #self._vehicle.apply_control(control)
-            #if the waypoint is closed enough, we can pop it out.
-        if target_waypoint.transform.location.distance(vehicle_transform.location) < 1:
-               self.waypoints_RL_list.pop(0) 
-
-        return control
-
-
+            
+        
     def done(self):
         """
         Returns whether or not the planner has finished

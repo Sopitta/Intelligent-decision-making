@@ -23,7 +23,7 @@ except IndexError:
 import carla
 #from env import CarEnv, World, HUD
 from Env.env_discrete import World, HUD
-from agent.myagent import Agent
+#from agent.myagent import Agent
 from high_level_sc import HighLevelSC
 from stable_baselines import DQN #get action from DQN and evn.step(action)
 from stable_baselines.common.env_checker import check_env

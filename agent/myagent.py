@@ -83,6 +83,10 @@ class Agent:
     def run_step3(self,action,prevaction):
         control = self.local_plan.run_step4(action,prevaction)
         return control
+
+    def run_step_RL(self,action):
+        control = self.local_plan.run_RL(action) #change to RL local planner
+        return control
     
     
     

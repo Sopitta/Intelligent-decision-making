@@ -28,6 +28,8 @@ from RL.myRL import RL
 import gym
 from gym import spaces
 from stable_baselines.common.env_checker import check_env
+from agent.myagent import Agent
+from high_level_sc import HighLevelSC
 
 '''
 def process_ods(event):
@@ -45,6 +47,8 @@ class World(gym.Env):
         
         client = carla.Client("localhost", 2000)
         client.set_timeout(4.0)
+
+        #initialize pygame
         pygame.init()
         pygame.font.init()
 
@@ -53,7 +57,7 @@ class World(gym.Env):
         self.map = self.world.get_map()
 
 
-        self.action_space = spaces.Discrete(3)
+        self.action_space = spaces.Discrete(3) #action 0,1,2
 
         self.observation_space = spaces.Box(
             low=-np.inf, 
@@ -78,6 +82,7 @@ class World(gym.Env):
         self.STEER_AMT = 1.0
         self.collision_hist = []
         self.RL = RL()
+        self.agent = None
 
         #pygame
         self.display = pygame.display.set_mode((1280, 720),pygame.HWSURFACE | pygame.DOUBLEBUF)
@@ -86,23 +91,31 @@ class World(gym.Env):
     def step(self,action):
         """apply steer and throttle from Reinforcement learning"""
         print('stepping')
-        #print(self.camera_manager.sensor)
+        
         self.tick(self.clock)
         self.render(self.display)
         pygame.display.flip()
         player_state = self.get_state(self.player)
         done,reward = self.RL.cal_reward(self.collision_hist,player_state)
-        #print(player_state)
+       
         obs = self.process_bev()
         info = dict()
+        '''
         if action == 0:
             self.player.apply_control(carla.VehicleControl(throttle=1.0, steer=-1*self.STEER_AMT))
         elif action == 1:
             self.player.apply_control(carla.VehicleControl(throttle=1.0, steer= 0))
         elif action == 2:
             self.player.apply_control(carla.VehicleControl(throttle=1.0, steer=1*self.STEER_AMT))
-        if self.total_step == 10:
+        '''
+        if self.player.get_location().z > 0:
+            print(action)
+            control = self.agent.run_step_RL(action)
+            self.player.apply_control(control)
+        if self.total_step == 200:
             done = True
+        
+
         print(done)
         if done == True:
             self.episode == self.episode + 1
@@ -128,6 +141,7 @@ class World(gym.Env):
         self.spawn_player()
         self.spawn_others()
         self.spawn_sensors()
+        self.agent = Agent(self.player)
         actor_type = get_actor_display_name(self.player)
         self.hud.notification(actor_type)
 
