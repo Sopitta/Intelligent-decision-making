@@ -171,6 +171,9 @@ class LocalPlanner(object):
         """
         self._target_speed = speed
 
+    def on_the_same_lane(self, WP1, WP2):
+        pass
+
     def _compute_next_waypoints(self, k=1):
         """
         Add new waypoints to the trajectory queue.
@@ -579,6 +582,126 @@ class LocalPlanner(object):
         
         return control
 
+    def run_step5(self, action,prevaction,debug=False):
+        """
+        Execute one step of local planning which involves running the longitudinal and lateral PID controllers to
+        follow the waypoints trajectory.
+
+        :param debug: boolean flag to activate waypoints debugging
+        :return: control to be applied
+        """
+        
+        # not enough waypoints in the horizon? => add more!
+        #if not self._global_plan and len(self._waypoints_queue) < int(self._waypoints_queue.maxlen * 0.5):
+        #    self._compute_next_waypoints(k=100)
+       
+        buffer_old_len = self.buffer_old
+        if len(self._waypoints_queue) == 0 and len(self._waypoint_buffer) == 0:
+            control = carla.VehicleControl()
+            control.steer = 0.0
+            control.throttle = 0.0
+            control.brake = 1.0
+            control.hand_brake = False
+            control.manual_gear_shift = False
+
+            return control
+
+        #   Buffering the waypoints
+        if not self._waypoint_buffer:
+            for _ in range(self._buffer_size):
+                if self._waypoints_queue:
+                    self._waypoint_buffer.append(
+                        self._waypoints_queue.popleft())
+                else:
+                    break
+        #if some conditions are true; manipulate the whole wp buffer.
+        buffer_len = len(self._waypoint_buffer)
+        #print(buffer_len)
+        if prevaction!= None and prevaction != action and action != 1:
+            self.n_modify_wp = 50
+            self.action_list = []
+        
+        
+        # current vehicle waypoint
+        vehicle_transform = self._vehicle.get_transform()
+        self._current_waypoint = self._map.get_waypoint(vehicle_transform.location)
+        # target waypoint
+        self.target_waypoint_initial, self._target_road_option = self._waypoint_buffer[0]
+        self.target_waypoint_modified = self.target_waypoint_initial
+
+
+        ##additional part
+        #check the action
+        #if action is 1 stay in the same lane
+            #check if the lane is in the same lane as target wp
+                #if yes:
+                    #follow the global wp
+                #if no:
+                    #modified the wp
+        #if action is 2 change lane left
+            
+
+
+
+
+        if self.n_modify_wp > 0 : 
+            
+            if self.n_modify_wp == 50:
+                if action == 2: #change left
+                    cur_wp_par = self._current_waypoint.get_left_lane()
+                    self.new_wp = cur_wp_par.next(3)[0]
+                if action == 3: #change right
+                    cur_wp_par = self._current_waypoint.get_right_lane()
+                    self.new_wp = cur_wp_par.next(3)[0]
+                self.action_list.append(action)
+                #print(self.action_list)
+                if action == 1:
+                    if self.action_list[0] == 2:
+                        cur_wp_par = self._current_waypoint.get_left_lane()
+                        self.new_wp = cur_wp_par.next(3)[0]
+                    if self.action_list[0] == 3:
+                        cur_wp_par = self._current_waypoint.get_right_lane()
+                        self.new_wp = cur_wp_par.next(3)[0]
+            else:
+                
+                if self.new_wp.transform.location.distance(vehicle_transform.location) < self._min_distance :
+                    self.new_wp = self.new_wp.next(3)[0]
+                else:
+                    self.new_wp = self.new_wp
+            self.target_waypoint_modified = self.new_wp
+            if buffer_len!=buffer_old_len:
+                self.n_modify_wp  = self.n_modify_wp - 1
+            
+        if self.n_modify_wp == 0:
+            self.action_list = []
+            #print('current wp ', self._current_waypoint )
+            #print(self.target_waypoint_initial, "    ", self.target_waypoint_modified)
+            
+            
+        # move using PID controllers 
+        control = self._vehicle_controller.run_step(self._target_speed, self.target_waypoint_modified)
+        #control = self._vehicle_controller.run_step(self._target_speed, self.target_waypoint_initial)
+        
+        
+
+        # purge the queue of obsolete waypoints
+        max_index = -1
+
+        for i, (waypoint, _) in enumerate(self._waypoint_buffer):
+            if waypoint.transform.location.distance(vehicle_transform.location) < self._min_distance:
+                max_index = i
+        if max_index >= 0:
+            for i in range(max_index + 1):
+                self._waypoint_buffer.popleft()
+    
+        if debug:
+            draw_waypoints(self._vehicle.get_world(), [self.target_waypoint], self._vehicle.get_location().z + 1.0)
+        
+        self.buffer_old = buffer_len
+        
+        
+        return control
+
     def run_RL(self, action):
         """
         Execute the action from RL policy
@@ -591,13 +714,13 @@ class LocalPlanner(object):
         
         if len(self.waypoints_RL_list)== 0 : 
             if action == 0 : #stay
-                self.waypoints_RL_list  = current_waypoint.next(7)
+                self.waypoints_RL_list  = current_waypoint.next(4)
             elif action  == 1 : #go left
                 current_waypoint_left = current_waypoint.get_left_lane()
-                self.waypoints_RL_list = current_waypoint_left.next(7)
+                self.waypoints_RL_list = current_waypoint_left.next(4)
             elif action  == 2 : #go right
                 current_waypoint_right = current_waypoint.get_right_lane()
-                self.waypoints_RL_list = current_waypoint_right.next(7)
+                self.waypoints_RL_list = current_waypoint_right.next(4)
         
        
         
@@ -607,7 +730,7 @@ class LocalPlanner(object):
             
             #self._vehicle.apply_control(control)
             #if the waypoint is closed enough, we can pop it out.
-        if target_waypoint.transform.location.distance(vehicle_transform.location) < 1:
+        if target_waypoint.transform.location.distance(vehicle_transform.location) < 2:
                self.waypoints_RL_list.pop(0) 
 
         return control

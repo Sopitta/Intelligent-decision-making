@@ -30,6 +30,7 @@ from gym import spaces
 from stable_baselines.common.env_checker import check_env
 from agent.myagent import Agent
 from high_level_sc import HighLevelSC
+from RL.safety_rules import safety_rules
 
 '''
 def process_ods(event):
@@ -83,6 +84,9 @@ class World(gym.Env):
         self.collision_hist = []
         self.RL = RL()
         self.agent = None
+        self.high_level = None
+        self.previous_safe_action = None
+        self.safety_rules = None
 
         #pygame
         self.display = pygame.display.set_mode((1280, 720),pygame.HWSURFACE | pygame.DOUBLEBUF)
@@ -92,12 +96,27 @@ class World(gym.Env):
         """apply steer and throttle from Reinforcement learning"""
         print('stepping')
         
+        #getting a safe action
+        safe_action = self.high_level.get_action(self.player,self.car1,self.car2,self.car3,self.car4)
+        #print('safe action is' + str(safe_action))
+        #print('previous safe action is' + str(self.previous_safe_action))
+        #print(self.agent.local_plan.target_waypoint_modified)
+        safe_control = self.agent.run_step3(safe_action,self.previous_safe_action)
+        #print(self.agent.local_plan.target_waypoint_modified.transform.location)
+
+        #pygame related stuff
         self.tick(self.clock)
         self.render(self.display)
         pygame.display.flip()
+
+        self.n_safe = 0
+
+        #getting reward and done
         player_state = self.get_state(self.player)
         done,reward = self.RL.cal_reward(self.collision_hist,player_state)
-       
+        
+        #getting observation_space
+
         obs = self.process_bev()
         info = dict()
         '''
@@ -109,39 +128,62 @@ class World(gym.Env):
             self.player.apply_control(carla.VehicleControl(throttle=1.0, steer=1*self.STEER_AMT))
         '''
         if self.player.get_location().z > 0:
-            print(action)
-            control = self.agent.run_step_RL(action)
-            self.player.apply_control(control)
-        if self.total_step == 200:
+            #print(action)
+            RL_control = self.agent.run_step_RL(action)
+            next_RL_wp = self.agent.get_next_WP_RL()
+            self.player.apply_control(RL_control)
+            print(next_RL_wp.transform.location)
+            '''
+            #self.agent.local_plan.n_modify_wp
+            if next_RL_wp is not None:
+                #print('next RL wp exists')
+                if self.safety_rules.is_out_of_range(next_RL_wp) or  self.n_safe > 0:
+                    #print('safe action is' + str(safe_action))
+                    #print('previous safe action is' + str(self.previous_safe_action))
+                    if self.n_safe == 0:
+                        self.n_safe = 40
+                    print(self.agent.local_plan.target_waypoint_modified.transform.location)
+                    self.player.apply_control(safe_control)
+                else:
+                    self.player.apply_control(RL_control)
+            else:
+                self.player.apply_control(RL_control)
+            '''    
+        # if action from RL leads to out of range or collision, activate the control signal from safe action module
+        if self.total_step == 500:
             done = True
         
+        self.previous_safe_action = safe_action
 
-        print(done)
+        #print(done)
         if done == True:
             self.episode == self.episode + 1
             self.destroy()
 
-        #steer = 0
-        #throttle = 0
-        #control = carla.VehicleControl(throttle=throttle, steer=steer)
-        #self.apply.apply_control(control)
+       
         self.total_step = self.total_step+1
+        self.n_safe = self.n_safe - 1
         #print(action)
         return obs, reward, done, info
         
         
     def reset(self):
-        print('resetting')
+        #print('resetting')
         #self.destroy()
         self.actor_list = []
         self.collision_hist = []
         self.cumulative_reward = 0.0
         self.total_step = 0.0
         self.episode = 0.0
+        self.previous_safe_action = None
         self.spawn_player()
         self.spawn_others()
         self.spawn_sensors()
         self.agent = Agent(self.player)
+        self.high_level = HighLevelSC(self.world)
+        self.safety_rules = safety_rules()
+        dest = carla.Transform(carla.Location(x=174.1, y=-16.8, z= 0.0))
+        self.agent.set_destination((dest.location.x,dest.location.y,dest.location.z))
         actor_type = get_actor_display_name(self.player)
         self.hud.notification(actor_type)
 
@@ -239,7 +281,7 @@ class World(gym.Env):
 
     def render(self, display):
         """Render world"""
-        print('rendering')
+        #print('rendering')
         self.camera_manager.render(display)
         self.hud.render(display)
     '''    
@@ -275,7 +317,7 @@ class World(gym.Env):
         # produces np.ndarray of shape (height, width, 3)
         #rgb = self.birdview_producer.as_rgb(birdview)
         obs = birdview.flatten()
-        print(obs.shape)
+        #print(obs.shape)
 
         return obs
 

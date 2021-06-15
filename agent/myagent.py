@@ -88,7 +88,13 @@ class Agent:
         control = self.local_plan.run_RL(action) #change to RL local planner
         return control
     
-    
+    def get_next_WP_RL(self):
+        
+        if self.local_plan.waypoints_RL_list != []:
+            next_RL_wp = self.local_plan.waypoints_RL_list[0]
+        else:
+            next_RL_wp = None
+        return next_RL_wp
     
     def set_destination(self, location):
         """
@@ -100,7 +106,7 @@ class Agent:
         end_waypoint = self.map.get_waypoint(carla.Location(location[0], location[1], location[2]))
 
         route_trace = self.trace_route(start_waypoint, end_waypoint)
-        print(len(route_trace))
+        #print(len(route_trace))
         self.local_plan.set_global_plan(route_trace)
     
     
