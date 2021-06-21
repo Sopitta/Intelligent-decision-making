@@ -32,15 +32,7 @@ from agent.myagent import Agent
 from high_level_sc import HighLevelSC
 from RL.safety_rules import safety_rules
 
-'''
-def process_ods(event):
-    other = event.other_actor #carla.Actor
-    if "vehicle" in other.type_id:
-        dist = event.distance
-        print("distance from the front car is" + str(dist))
-        return dist
-'''
- 
+
 class World(gym.Env):    
     def __init__(self):
 
@@ -58,7 +50,8 @@ class World(gym.Env):
         self.map = self.world.get_map()
 
 
-        self.action_space = spaces.Discrete(3) #action 0,1,2
+        #self.action_space = spaces.Discrete(3) #action 0,1,2 
+        self.action_space = spaces.Box(np.array([-1, 0]), np.array([+1, +1]), dtype=np.float32 )  # steer, throttle
 
         self.observation_space = spaces.Box(
             low=-np.inf, 
@@ -94,66 +87,37 @@ class World(gym.Env):
 
     def step(self,action):
         """apply steer and throttle from Reinforcement learning"""
-        print('stepping')
-        
-        #getting a safe action
-        safe_action = self.high_level.get_action(self.player,self.car1,self.car2,self.car3,self.car4)
-        #print('safe action is' + str(safe_action))
-        #print('previous safe action is' + str(self.previous_safe_action))
-        #print(self.agent.local_plan.target_waypoint_modified)
-        safe_control = self.agent.run_step3(safe_action,self.previous_safe_action)
-        #print(self.agent.local_plan.target_waypoint_modified.transform.location)
+       
 
         #pygame related stuff
         self.tick(self.clock)
         self.render(self.display)
         pygame.display.flip()
-
-        self.n_safe = 0
+        print(action)
+        print(action.shape)
+      
 
         #getting reward and done
         player_state = self.get_state(self.player)
         done,reward = self.RL.cal_reward(self.collision_hist,player_state)
         
         #getting observation_space
-
         obs = self.process_bev()
         info = dict()
-        '''
-        if action == 0:
-            self.player.apply_control(carla.VehicleControl(throttle=1.0, steer=-1*self.STEER_AMT))
-        elif action == 1:
-            self.player.apply_control(carla.VehicleControl(throttle=1.0, steer= 0))
-        elif action == 2:
-            self.player.apply_control(carla.VehicleControl(throttle=1.0, steer=1*self.STEER_AMT))
-        '''
-        if self.player.get_location().z > 0:
-            #print(action)
-            RL_control = self.agent.run_step_RL(action)
-            next_RL_wp = self.agent.get_next_WP_RL()
-            self.player.apply_control(RL_control)
-            print(next_RL_wp.transform.location)
-            '''
-            #self.agent.local_plan.n_modify_wp
-            if next_RL_wp is not None:
-                #print('next RL wp exists')
-                if self.safety_rules.is_out_of_range(next_RL_wp) or  self.n_safe > 0:
-                    #print('safe action is' + str(safe_action))
-                    #print('previous safe action is' + str(self.previous_safe_action))
-                    if self.n_safe == 0:
-                        self.n_safe = 40
-                    print(self.agent.local_plan.target_waypoint_modified.transform.location)
-                    self.player.apply_control(safe_control)
-                else:
-                    self.player.apply_control(RL_control)
-            else:
-                self.player.apply_control(RL_control)
-            '''    
+       
+        #if self.player.get_location().z > 0: #if the car is at the floor
+            
+        #follow the wp with safety control
+            #once is near the obstacle activate RL
+            #if the RL is too near activate the emergency breaking and end the episode.
+        
+         #RL is awarded if it can keep a good speed and alive.   
+            
         # if action from RL leads to out of range or collision, activate the control signal from safe action module
-        if self.total_step == 500:
+        if self.total_step == 100:
             done = True
         
-        self.previous_safe_action = safe_action
+        
 
         #print(done)
         if done == True:
@@ -161,8 +125,10 @@ class World(gym.Env):
             self.destroy()
 
        
-        self.total_step = self.total_step+1
-        self.n_safe = self.n_safe - 1
+        self.total_step = self.total_step+1+
+
+
+        
         #print(action)
         return obs, reward, done, info
         
@@ -214,43 +180,10 @@ class World(gym.Env):
             self.car1.destroy()
         self.car1 = self.world.spawn_actor(vehicle_bp, self.transform1)
         #self.car1.set_autopilot(True)
-        self.car1.apply_control(carla.VehicleControl(throttle=0.35, steer=0))
+        #self.car1.apply_control(carla.VehicleControl(throttle=0.35, steer=0))
         self.actor_list.append(self.car1)
         print(f'Car1 model is {self.car1}.')
         
-        #car2
-        vehicle_bp2 = self.world.get_blueprint_library().filter("mercedes-benz")[0]
-        self.transform2 = carla.Transform(carla.Location(x=500.9 , y=-13.8, z= 10.0),carla.Rotation(yaw=-180))
-        if self.car2 is not None:
-            self.car2.destroy()
-        self.car2 = self.world.spawn_actor(vehicle_bp2, self.transform2)
-        #self.car1.set_autopilot(True)
-        self.car2.apply_control(carla.VehicleControl(throttle=0.35, steer=0))
-        self.actor_list.append(self.car2)
-        print(f'Car2 model is {self.car2}.')
-        
-        '''
-         #car3
-        vehicle_bp3 = self.world.get_blueprint_library().filter("mercedes-benz")[0] #t2 model can go fat
-        self.transform3 = carla.Transform(carla.Location(x=550 , y=-20.7, z= 10.0),carla.Rotation(yaw=-180))
-        
-        if self.car3 is not None:
-            self.car3.destroy()
-        self.car3 = self.world.spawn_actor(vehicle_bp3, self.transform3)
-        self.car3.apply_control(carla.VehicleControl(throttle=0.35, steer=0))
-        self.actor_list.append(self.car3)
-        print(f'Car3 model is {self.car3}.')
-        '''
-        #car4
-        vehicle_bp4 = self.world.get_blueprint_library().filter("toyota")[0]
-        self.transform4 = carla.Transform(carla.Location(x=500.9, y=-17.2, z= 10.0),carla.Rotation(yaw=-180))
-        if self.car4 is not None:
-            self.car4.destroy()
-        self.car4 = self.world.spawn_actor(vehicle_bp4, self.transform4)
-        self.car4.apply_control(carla.VehicleControl(throttle=0.35, steer=0))
-        self.actor_list.append(self.car4)
-        print(f'Car4 model is {self.car4}.')
-
     def spawn_sensors(self):
         """spawn sensors to the env"""
         #camera manager
