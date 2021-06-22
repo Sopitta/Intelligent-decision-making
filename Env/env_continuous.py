@@ -65,6 +65,7 @@ class World(gym.Env):
         self.car2 = None
         self.car3 = None
         self.car4 = None
+        self.walker1 = None
         self.camera_manager = None
         self.collision_sensor = None
         self.hud = hud
@@ -125,7 +126,7 @@ class World(gym.Env):
             self.destroy()
 
        
-        self.total_step = self.total_step+1+
+        self.total_step = self.total_step+1
 
 
         
@@ -143,8 +144,9 @@ class World(gym.Env):
         self.episode = 0.0
         self.previous_safe_action = None
         self.spawn_player()
-        self.spawn_others()
+        #self.spawn_others()
         self.spawn_sensors()
+        self.spawn_walker()
         self.agent = Agent(self.player)
         self.high_level = HighLevelSC(self.world)
         self.safety_rules = safety_rules()
@@ -207,6 +209,20 @@ class World(gym.Env):
         if self.collision_sensor is not None:
             self.collision_sensor.sensor.destroy()
         self.collision_sensor = CollisionSensor(self.player, self.hud)
+
+    def spawn_walker(self):
+        walker_bp = random.choice(self.world.get_blueprint_library().filter('walker'))
+        self.transform_walk = carla.Transform(carla.Location(x=540.9, y=-17.2, z= 10.0),carla.Rotation(yaw=-180))
+        if self.walker1 is not None:
+            self.walker1.destroy()
+        self.walker1 = self.world.spawn_actor(walker_bp, self.transform_walk)
+        print(f'Walker is {self.walker1}.')
+
+       
+        #self.car1.set_autopilot(True)
+        #self.car1.apply_control(carla.VehicleControl(throttle=0.35, steer=0))
+        #self.actor_list.append(self.car1)
+        #print(f'Car1 model is {self.car1}.')
 
     def tick(self, clock):
         """Method for every tick"""
