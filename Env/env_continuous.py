@@ -94,9 +94,33 @@ class World(gym.Env):
         self.tick(self.clock)
         self.render(self.display)
         pygame.display.flip()
-        print(action)
-        print(action.shape)
+        #print(action)
+        #print(action.shape)
+
+        #walker
+        control_w = carla.WalkerControl()
+        control_w.speed = 0.6
+        control_w.direction.y = 1
+        control_w.direction.x = 0
+        control_w.direction.z = 0
+        self.walker1.apply_control(control_w)
       
+        #player
+        control_p = carla.VehicleControl()
+
+        #safety rules
+        print(abs(self.player.get_location().x - self.walker1.get_location().x))
+        if abs(self.player.get_location().x - self.walker1.get_location().x) < 10:
+            control_p = carla.VehicleControl()
+            control_p.steer = 0.0
+            control_p.throttle = 0.0
+            control_p.brake = 1.0
+            control_p.hand_brake = False
+            control_p.manual_gear_shift = False    
+        else:
+            control_p = self.agent.run_step()
+
+        self.player.apply_control(control_p)
 
         #getting reward and done
         player_state = self.get_state(self.player)
@@ -115,7 +139,7 @@ class World(gym.Env):
          #RL is awarded if it can keep a good speed and alive.   
             
         # if action from RL leads to out of range or collision, activate the control signal from safe action module
-        if self.total_step == 100:
+        if self.total_step == 200:
             done = True
         
         
@@ -212,7 +236,7 @@ class World(gym.Env):
 
     def spawn_walker(self):
         walker_bp = random.choice(self.world.get_blueprint_library().filter('walker'))
-        self.transform_walk = carla.Transform(carla.Location(x=540.9, y=-17.2, z= 10.0),carla.Rotation(yaw=-180))
+        self.transform_walk = carla.Transform(carla.Location(x=540.9, y=-21.2, z= 10.0),carla.Rotation(yaw=-180))
         if self.walker1 is not None:
             self.walker1.destroy()
         self.walker1 = self.world.spawn_actor(walker_bp, self.transform_walk)
@@ -247,7 +271,7 @@ class World(gym.Env):
     def destroy(self):
         """Destroys all actors"""
         sensors = [self.camera_manager, self.collision_sensor]
-        cars = [self.car1, self.car2, self.car3, self.car4,self.player]
+        cars = [self.car1, self.car2, self.car3, self.car4,self.player,self.walker1]
         for s in sensors:
             if s is not None:
                 s.sensor.destroy()
@@ -286,6 +310,18 @@ class World(gym.Env):
         y = loc_xyz.y
         
         return [x,y,heading_rad,v_ms]
+
+    def euclidean_dist(self,obs1,obs2):
+        '''
+        obs1,obs2:Observations(list) 
+        return: 
+        dist :Distance between two vehicles calulated from their observations
+        '''
+        
+        a = np.array((obs1[0],obs1[1])) #(2,)
+        b = np.array((obs2[0],obs2[1])) #(2,)
+        dist = np.linalg.norm(a-b)
+        return dist
 
 
 
