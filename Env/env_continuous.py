@@ -97,6 +97,7 @@ class World(gym.Env):
         #print(action)
         #print(action.shape)
 
+        
         #walker
         control_w = carla.WalkerControl()
         control_w.speed = 0.6
@@ -104,13 +105,21 @@ class World(gym.Env):
         control_w.direction.x = 0
         control_w.direction.z = 0
         self.walker1.apply_control(control_w)
-      
+        
         #player
         control_p = carla.VehicleControl()
 
+        #find euclidian Distance
+        obs_player = self.get_obs(self.player)
+        print(obs_player)
+        obs_walker = self.get_obs(self.walker1)
+        e_dist = self.euclidean_dist(obs_player,obs_walker)
+
         #safety rules
-        print(abs(self.player.get_location().x - self.walker1.get_location().x))
-        if abs(self.player.get_location().x - self.walker1.get_location().x) < 10:
+        #print(abs(self.player.get_location().x - self.walker1.get_location().x))
+        #if abs(self.player.get_location().x - self.walker1.get_location().x) < 10:
+        
+        if e_dist < 7:
             control_p = carla.VehicleControl()
             control_p.steer = 0.0
             control_p.throttle = 0.0
@@ -119,7 +128,8 @@ class World(gym.Env):
             control_p.manual_gear_shift = False    
         else:
             control_p = self.agent.run_step()
-
+        
+        #control_p = self.agent.run_step()
         self.player.apply_control(control_p)
 
         #getting reward and done
@@ -159,8 +169,7 @@ class World(gym.Env):
         
         
     def reset(self):
-        #print('resetting')
-        #self.destroy()
+        
         self.actor_list = []
         self.collision_hist = []
         self.cumulative_reward = 0.0
@@ -172,9 +181,9 @@ class World(gym.Env):
         self.spawn_sensors()
         self.spawn_walker()
         self.agent = Agent(self.player)
-        self.high_level = HighLevelSC(self.world)
-        self.safety_rules = safety_rules()
-        dest = carla.Transform(carla.Location(x=174.1, y=-16.8, z= 0.0))
+        #self.high_level = HighLevelSC(self.world)
+        #self.safety_rules = safety_rules()
+        dest = carla.Transform(carla.Location(x=400, y=-17.2, z= 0.0))
         self.agent.set_destination((dest.location.x,dest.location.y,dest.location.z))
         actor_type = get_actor_display_name(self.player)
         self.hud.notification(actor_type)
@@ -188,7 +197,7 @@ class World(gym.Env):
     def spawn_player(self):
         """spawn player to the env"""
         model_3 = self.world.get_blueprint_library().filter("model3")[0]
-        self.transform = carla.Transform(carla.Location(x=581.6, y=-17.2, z=10),carla.Rotation(yaw=-180)) #map6
+        self.transform = carla.Transform(carla.Location(x=520, y=-17.2, z=10),carla.Rotation(yaw=-180)) #map6
         if self.player is not None:
             self.player.destroy()
         self.player = self.world.spawn_actor(model_3, self.transform)
@@ -201,7 +210,7 @@ class World(gym.Env):
 
         #car1
         vehicle_bp = self.world.get_blueprint_library().filter("mercedes-benz")[0]
-        self.transform1 = carla.Transform(carla.Location(x=540.9, y=-17.2, z= 10.0),carla.Rotation(yaw=-180))
+        self.transform1 = carla.Transform(carla.Location(x=490, y=-17.2, z= 10.0),carla.Rotation(yaw=-180))
         if self.car1 is not None:
             self.car1.destroy()
         self.car1 = self.world.spawn_actor(vehicle_bp, self.transform1)
@@ -236,17 +245,12 @@ class World(gym.Env):
 
     def spawn_walker(self):
         walker_bp = random.choice(self.world.get_blueprint_library().filter('walker'))
-        self.transform_walk = carla.Transform(carla.Location(x=540.9, y=-21.2, z= 10.0),carla.Rotation(yaw=-180))
+        self.transform_walk = carla.Transform(carla.Location(x=490, y=-21.2, z= 10.0),carla.Rotation(yaw=-180))
         if self.walker1 is not None:
             self.walker1.destroy()
         self.walker1 = self.world.spawn_actor(walker_bp, self.transform_walk)
         print(f'Walker is {self.walker1}.')
 
-       
-        #self.car1.set_autopilot(True)
-        #self.car1.apply_control(carla.VehicleControl(throttle=0.35, steer=0))
-        #self.actor_list.append(self.car1)
-        #print(f'Car1 model is {self.car1}.')
 
     def tick(self, clock):
         """Method for every tick"""
@@ -310,6 +314,20 @@ class World(gym.Env):
         y = loc_xyz.y
         
         return [x,y,heading_rad,v_ms]
+
+    def get_obs(self, car):
+        '''
+        car:carla.Actor, type carla.Vehicle
+        return: State of the car 
+        
+        '''
+        loc_xyz = car.get_location()
+        #t = car.get_transform()
+        
+        x = loc_xyz.x
+        y = loc_xyz.y
+        
+        return [x,y]
 
     def euclidean_dist(self,obs1,obs2):
         '''

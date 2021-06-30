@@ -106,7 +106,6 @@ class Agent:
         end_waypoint = self.map.get_waypoint(carla.Location(location[0], location[1], location[2]))
 
         route_trace = self.trace_route(start_waypoint, end_waypoint)
-        #print(len(route_trace))
         self.local_plan.set_global_plan(route_trace)
     
     
