@@ -25,6 +25,19 @@ class RL(object):
 
 		#self.cumulative_reward = self.cumulative_reward+self.reward
 		return self.done,self.reward
+	def R_safe(self,throttle_safe,throttle_RL,throttle):
+		if throttle == throttle_RL:
+			reward_safe = 0
+		else:
+			reward_safe = -15
+		return reward_safe
+	def R_eff(self,speed):
+		reward_eff = -abs(speed-20)+13
+		return reward_eff
+	def R_comfort(self,acc):
+		
+		
+		
 
 
 			
