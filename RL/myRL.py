@@ -35,7 +35,8 @@ class RL(object):
 		reward_eff = -abs(speed-20)+13
 		return reward_eff
 	def R_comfort(self,acc):
-		
+		return 0
+	
 		
 		
 

@@ -51,7 +51,8 @@ class World(gym.Env):
 
 
         #self.action_space = spaces.Discrete(3) #action 0,1,2 
-        self.action_space = spaces.Box(np.array([-1, 0]), np.array([+1, +1]), dtype=np.float32 )  # steer, throttle
+        #self.action_space = spaces.Box(np.array([-1, 0]), np.array([+1, +1]), dtype=np.float32 )  # steer, throttle
+        self.action_space = spaces.Box(np.array([-1]), np.array([1]), dtype=np.float32 )  # throttle
 
         self.observation_space = spaces.Box(
             low=-np.inf, 
@@ -94,13 +95,16 @@ class World(gym.Env):
         self.tick(self.clock)
         self.render(self.display)
         pygame.display.flip()
-        #print(action)
-        #print(action.shape)
 
-        
+        print(action)
+        print(action.shape)
+
+        #emergency brake stuff
+        Emergency_brake = False
+
         #walker
         control_w = carla.WalkerControl()
-        control_w.speed = 0.6
+        control_w.speed = 0.5
         control_w.direction.y = 1
         control_w.direction.x = 0
         control_w.direction.z = 0
@@ -111,15 +115,18 @@ class World(gym.Env):
 
         #find euclidian Distance
         obs_player = self.get_obs(self.player)
-        print(obs_player)
+        #print(obs_player)
         obs_walker = self.get_obs(self.walker1)
         e_dist = self.euclidean_dist(obs_player,obs_walker)
 
         #safety rules
         #print(abs(self.player.get_location().x - self.walker1.get_location().x))
         #if abs(self.player.get_location().x - self.walker1.get_location().x) < 10:
-        
+
+        print(self.is_dest(self.player)) #test this function first, it all is good, use it.
+        #if e_dist < 7 or self.is_dest(self.player):
         if e_dist < 7:
+            Emergency_brake = True
             control_p = carla.VehicleControl()
             control_p.steer = 0.0
             control_p.throttle = 0.0
@@ -127,7 +134,23 @@ class World(gym.Env):
             control_p.hand_brake = False
             control_p.manual_gear_shift = False    
         else:
-            control_p = self.agent.run_step()
+            if abs(self.player.get_location().x - self.walker1.get_location().x) <= 30: #activate > RL
+                #use control_p from RL
+                control_s= self.agent.run_step()
+                control_p = carla.VehicleControl()
+                throt_RL = action[0]
+                print(throt_RL)
+                print(type(throt_RL))
+                if throt_RL >= 0:
+                    control_p.throttle = float(throt_RL)
+                else:
+                    control_p.brake = abs(float(throt_RL)) 
+                control_p.steer = control_s.steer #throttle from RL, steer from safety controller.
+            else:
+                #use safety rule when not in range.
+                control_p = self.agent.run_step()
+            #use RL
+            #use safety control
         
         #control_p = self.agent.run_step()
         self.player.apply_control(control_p)
@@ -140,13 +163,7 @@ class World(gym.Env):
         obs = self.process_bev()
         info = dict()
        
-        #if self.player.get_location().z > 0: #if the car is at the floor
-            
-        #follow the wp with safety control
-            #once is near the obstacle activate RL
-            #if the RL is too near activate the emergency breaking and end the episode.
-        
-         #RL is awarded if it can keep a good speed and alive.   
+        #if self.player.get_location().z > 0: #if the car is at the floor  
             
         # if action from RL leads to out of range or collision, activate the control signal from safe action module
         if self.total_step == 200:
@@ -183,8 +200,8 @@ class World(gym.Env):
         self.agent = Agent(self.player)
         #self.high_level = HighLevelSC(self.world)
         #self.safety_rules = safety_rules()
-        dest = carla.Transform(carla.Location(x=400, y=-17.2, z= 0.0))
-        self.agent.set_destination((dest.location.x,dest.location.y,dest.location.z))
+        self.dest = carla.Transform(carla.Location(x=400, y=-17.2, z= 0.0))
+        self.agent.set_destination((self.dest.location.x,self.dest.location.y,self.dest.location.z))
         actor_type = get_actor_display_name(self.player)
         self.hud.notification(actor_type)
 
@@ -197,7 +214,7 @@ class World(gym.Env):
     def spawn_player(self):
         """spawn player to the env"""
         model_3 = self.world.get_blueprint_library().filter("model3")[0]
-        self.transform = carla.Transform(carla.Location(x=520, y=-17.2, z=10),carla.Rotation(yaw=-180)) #map6
+        self.transform = carla.Transform(carla.Location(x=550, y=-17.2, z=10),carla.Rotation(yaw=-180)) #map6
         if self.player is not None:
             self.player.destroy()
         self.player = self.world.spawn_actor(model_3, self.transform)
@@ -340,6 +357,18 @@ class World(gym.Env):
         b = np.array((obs2[0],obs2[1])) #(2,)
         dist = np.linalg.norm(a-b)
         return dist
+    def is_dest(self,player):
+        loc_xyz = player.get_location()
+        player_x = loc_xyz.x
+        player_y = loc_xyz.y
+        dest_x = self.dest.location.x
+        dest_y = self.dest.location.y
+        a = np.array((player_x,player_y)) #(2,)
+        b = np.array((dest_x,dest_y)) #(2,)
+        dist = np.linalg.norm(a-b)
+        
+
+        return dist < 2
 
 
 
