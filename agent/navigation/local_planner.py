@@ -271,7 +271,7 @@ class LocalPlanner(object):
         self._current_waypoint = self._map.get_waypoint(vehicle_transform.location)
         # target waypoint
         self.target_waypoint, self._target_road_option = self._waypoint_buffer[0]
-        print(self.target_waypoint)
+        #print(self.target_waypoint)
 
         if self.target_waypoint.transform.location.distance(vehicle_transform.location) > 2:
             self.target_waypoint = self._current_waypoint.next(2)[0]

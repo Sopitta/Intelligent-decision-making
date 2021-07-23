@@ -17,7 +17,7 @@ class RL(object):
 		#print('calculating reward')
 		if len(collision_hist) != 0:
 			self.done = True
-			self.reward = - 100
+			self.reward = -100
 		elif player_state[3]*3.6 < 10 : #speed lower than 10 km/h
 			self.reward = -1
 		else:
@@ -25,17 +25,36 @@ class RL(object):
 
 		#self.cumulative_reward = self.cumulative_reward+self.reward
 		return self.done,self.reward
-	def R_safe(self,throttle_safe,throttle_RL,throttle):
-		if throttle == throttle_RL:
-			reward_safe = 0
+	def R_safe(self,emergency_brake):
+		if emergency_brake:
+			reward_safe = -30
 		else:
-			reward_safe = -15
+			reward_safe = 0
 		return reward_safe
-	def R_eff(self,speed):
-		reward_eff = -abs(speed-20)+13
+	def R_eff(self,speed,player_break):
+		speed_kmh = speed*3.6
+		reward_speed = -abs(speed_kmh-20)+13
+		if player_break > 0.7:
+			reward_break = -15
+		else:
+			reward_break = 0
+		reward_eff = reward_speed + reward_break
 		return reward_eff
 	def R_comfort(self,acc):
-		return 0
+		acc_kmh = acc*3.6
+		if acc_kmh <= 7.2:
+			reward_comfort = 0
+		else:
+			reward_comfort = -acc_kmh+7.2
+		return reward_comfort
+	def R_collide(self,collision_hist):
+		if len(collision_hist) != 0:
+			self.done = True
+			reward_collision = -100
+		else:
+			reward_collision = 0
+		return reward_collision
+			
 	
 		
 		

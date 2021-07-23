@@ -96,19 +96,26 @@ class World(gym.Env):
         self.render(self.display)
         pygame.display.flip()
 
-        print(action)
-        print(action.shape)
+        #print(action)
+        #print(action.shape)
 
-        #emergency brake stuff
-        Emergency_brake = False
+        #set this to false in order to see which action the agent execute.
+        emergency_brake = False
+        use_RL = False
+        Out_of_RL = False
 
         #walker
         control_w = carla.WalkerControl()
-        control_w.speed = 0.5
+        #control_w.speed = 0.6
         control_w.direction.y = 1
         control_w.direction.x = 0
         control_w.direction.z = 0
+        if self.walker1.get_location().y > - 10:
+            control_w.speed = 0
+        else:
+            control_w.speed = 0.6
         self.walker1.apply_control(control_w)
+        #print(self.walker1.get_location().y)
         
         #player
         control_p = carla.VehicleControl()
@@ -123,24 +130,26 @@ class World(gym.Env):
         #print(abs(self.player.get_location().x - self.walker1.get_location().x))
         #if abs(self.player.get_location().x - self.walker1.get_location().x) < 10:
 
-        print(self.is_dest(self.player)) #test this function first, it all is good, use it.
+        #print(self.is_dest(self.player)) #test this function first, it all is good, use it.
         #if e_dist < 7 or self.is_dest(self.player):
-        if e_dist < 7:
-            Emergency_brake = True
+        if e_dist < 7 and self.walker1.get_location().y - self.player.get_location().y <= 3.5 : #euclidian distance < 7 and the walker is still haven't passed by the car'
+            emergency_brake = True
             control_p = carla.VehicleControl()
             control_p.steer = 0.0
             control_p.throttle = 0.0
             control_p.brake = 1.0
             control_p.hand_brake = False
             control_p.manual_gear_shift = False    
+
         else:
-            if abs(self.player.get_location().x - self.walker1.get_location().x) <= 30: #activate > RL
+            if abs(self.player.get_location().x - self.walker1.get_location().x) <= 35: #activate > RL
                 #use control_p from RL
+                use_RL = True
                 control_s= self.agent.run_step()
                 control_p = carla.VehicleControl()
                 throt_RL = action[0]
-                print(throt_RL)
-                print(type(throt_RL))
+                #print(throt_RL)
+                #print(type(throt_RL))
                 if throt_RL >= 0:
                     control_p.throttle = float(throt_RL)
                 else:
@@ -148,25 +157,54 @@ class World(gym.Env):
                 control_p.steer = control_s.steer #throttle from RL, steer from safety controller.
             else:
                 #use safety rule when not in range.
+                Out_of_RL = True
                 control_p = self.agent.run_step()
             #use RL
             #use safety control
         
-        #control_p = self.agent.run_step()
+        player_break = control_p.brake
         self.player.apply_control(control_p)
+        
 
         #getting reward and done
-        player_state = self.get_state(self.player)
-        done,reward = self.RL.cal_reward(self.collision_hist,player_state)
+        acc = self.player.get_acceleration()
+        vel = self.player.get_velocity()
+        v_ms = math.sqrt(vel.x**2 + vel.z**2 + vel.z**2)
+        a_ms = math.sqrt(acc.x**2 + acc.z**2 + acc.z**2)
         
+        if emergency_brake:
+            reward = -15
+        elif use_RL:
+            #reward_safe = self.RL.R_safe(emergency_brake)
+            reward_eff = self.RL.R_eff(v_ms,player_break)
+            reward_comfort = self.RL.R_comfort(a_ms)
+            reward = reward_eff + reward_comfort
+        elif Out_of_RL:
+            reward = 0
+        
+        #self.collision_sensor.collision_hist
+        print(self.collision_sensor.collision_hist)
+        reward_collision = self.RL.R_collide(self.collision_sensor.collision_hist)
+        reward = reward + reward_collision
+        done = self.RL.done
+        #if len(self.collision_hist)!=0:
+        print(reward_collision)
+           
+        #player_state = self.get_state(self.player)
+        #reward_safe = self.RL.R_safe(emergency_brake)
+        #reward_eff = self.RL.R_eff(v_s)
+        #reward_comfort = self.RL.R_comfort(a_s)
+        #done,reward = self.RL.cal_reward(self.collision_hist,player_state)
+        
+
         #getting observation_space
         obs = self.process_bev()
         info = dict()
        
-        #if self.player.get_location().z > 0: #if the car is at the floor  
+        
             
         # if action from RL leads to out of range or collision, activate the control signal from safe action module
-        if self.total_step == 200:
+        if self.total_step == 400 or self.player.get_location().x <= 455:
             done = True
         
         
@@ -178,8 +216,6 @@ class World(gym.Env):
 
        
         self.total_step = self.total_step+1
-
-
         
         #print(action)
         return obs, reward, done, info
@@ -261,8 +297,9 @@ class World(gym.Env):
         self.collision_sensor = CollisionSensor(self.player, self.hud)
 
     def spawn_walker(self):
-        walker_bp = random.choice(self.world.get_blueprint_library().filter('walker'))
-        self.transform_walk = carla.Transform(carla.Location(x=490, y=-21.2, z= 10.0),carla.Rotation(yaw=-180))
+        #walker_bp = random.choice(self.world.get_blueprint_library().filter('walker'))
+        walker_bp = self.world.get_blueprint_library().filter('walker')[3]
+        self.transform_walk = carla.Transform(carla.Location(x=490, y=-22, z= 10.0),carla.Rotation(yaw=-180))
         if self.walker1 is not None:
             self.walker1.destroy()
         self.walker1 = self.world.spawn_actor(walker_bp, self.transform_walk)
@@ -369,13 +406,6 @@ class World(gym.Env):
         
 
         return dist < 2
-
-
-
-    #get car state
-    #get obs for RL (for example,images)
-    #
-
 
 
 '''
