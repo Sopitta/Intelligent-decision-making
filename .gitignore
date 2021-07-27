@@ -2,5 +2,5 @@ __pycache__/
 *.npy
 ppo/
 .vs/
-birdview_v2_cache
+birdview_v2_cache/
 *.png
