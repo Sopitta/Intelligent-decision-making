@@ -42,6 +42,7 @@ class World(gym.Env):
         client.set_timeout(4.0)
 
         #initialize pygame
+        #os.environ["SDL_VIDEODRIVER"] = "dummy" #use this to make pygame headless
         pygame.init()
         pygame.font.init()
 
@@ -53,12 +54,18 @@ class World(gym.Env):
         #self.action_space = spaces.Discrete(3) #action 0,1,2 
         #self.action_space = spaces.Box(np.array([-1, 0]), np.array([+1, +1]), dtype=np.float32 )  # steer, throttle
         self.action_space = spaces.Box(np.array([-1]), np.array([1]), dtype=np.float32 )  # throttle
-
+        '''
         self.observation_space = spaces.Box(
             low=-np.inf, 
             high=np.inf, 
             #shape=(9,336,150), 
             shape = (453600,),
+            dtype=np.float32)
+        '''
+        self.observation_space = spaces.Box(
+            low=-np.inf, 
+            high=np.inf, 
+            shape = (2,4),
             dtype=np.float32)
         
         self.player = None
@@ -82,6 +89,9 @@ class World(gym.Env):
         self.high_level = None
         self.previous_safe_action = None
         self.safety_rules = None
+        self.col_num = 0
+        self.cum_r = []
+        self.reward_total = 0
 
         #pygame
         self.display = pygame.display.set_mode((1280, 720),pygame.HWSURFACE | pygame.DOUBLEBUF)
@@ -110,10 +120,10 @@ class World(gym.Env):
         control_w.direction.y = 1
         control_w.direction.x = 0
         control_w.direction.z = 0
-        if self.walker1.get_location().y > - 10:
+        if self.walker1.get_location().y > -10:
             control_w.speed = 0
         else:
-            control_w.speed = 0.6
+            control_w.speed = 0.65
         self.walker1.apply_control(control_w)
         #print(self.walker1.get_location().y)
         
@@ -121,9 +131,9 @@ class World(gym.Env):
         control_p = carla.VehicleControl()
 
         #find euclidian Distance
-        obs_player = self.get_obs(self.player)
+        obs_player = self.get_loc(self.player)
         #print(obs_player)
-        obs_walker = self.get_obs(self.walker1)
+        obs_walker = self.get_loc(self.walker1)
         e_dist = self.euclidean_dist(obs_player,obs_walker)
 
         #safety rules
@@ -132,88 +142,114 @@ class World(gym.Env):
 
         #print(self.is_dest(self.player)) #test this function first, it all is good, use it.
         #if e_dist < 7 or self.is_dest(self.player):
-        if e_dist < 7 and self.walker1.get_location().y - self.player.get_location().y <= 3.5 : #euclidian distance < 7 and the walker is still haven't passed by the car'
+        #euclidian distance < 7 and the walker is still haven't passed by the car
+
+        acc = self.player.get_acceleration()
+        vel = self.player.get_velocity()
+        v_ms = math.sqrt(vel.x**2 + vel.z**2 + vel.z**2)
+        a_ms = math.sqrt(acc.x**2 + acc.z**2 + acc.z**2)
+        v_kmh = v_ms*3.6
+
+        if v_kmh <= 20:
+            break_dist = 7
+        elif v_kmh > 20 and v_kmh <= 25:
+            break_dist = 8.5 
+        elif v_kmh > 25 and v_kmh <= 30:
+            break_dist = 10
+        elif v_kmh > 30 and v_kmh <= 35:
+            break_dist = 11.5
+        else:
+            break_dist = 13
+
+        if e_dist < break_dist and self.walker1.get_location().y - self.player.get_location().y <= 3.2 :
+
             emergency_brake = True
             control_p = carla.VehicleControl()
             control_p.steer = 0.0
             control_p.throttle = 0.0
             control_p.brake = 1.0
             control_p.hand_brake = False
-            control_p.manual_gear_shift = False    
+            control_p.manual_gear_shift = False        
 
         else:
             if abs(self.player.get_location().x - self.walker1.get_location().x) <= 35: #activate > RL
                 #use control_p from RL
                 use_RL = True
-                control_s= self.agent.run_step()
+                control_s = self.agent.run_step()
                 control_p = carla.VehicleControl()
                 throt_RL = action[0]
-                #print(throt_RL)
-                #print(type(throt_RL))
+                #print('RL action ',throt_RL)
+                
                 if throt_RL >= 0:
                     control_p.throttle = float(throt_RL)
                 else:
                     control_p.brake = abs(float(throt_RL)) 
+                    #print(control_p.brake)
                 control_p.steer = control_s.steer #throttle from RL, steer from safety controller.
             else:
                 #use safety rule when not in range.
                 Out_of_RL = True
                 control_p = self.agent.run_step()
-            #use RL
-            #use safety control
+            
         
         player_break = control_p.brake
+        player_throt = control_p.throttle
         self.player.apply_control(control_p)
-        
+        #print(control_p)
+        #print(emergency_brake)
+        #print(use_RL)
+        #print(Out_of_RL)
 
-        #getting reward and done
-        acc = self.player.get_acceleration()
-        vel = self.player.get_velocity()
-        v_ms = math.sqrt(vel.x**2 + vel.z**2 + vel.z**2)
-        a_ms = math.sqrt(acc.x**2 + acc.z**2 + acc.z**2)
+       
+       
         
         if emergency_brake:
-            reward = -15
+            reward = -10
         elif use_RL:
             #reward_safe = self.RL.R_safe(emergency_brake)
-            reward_eff = self.RL.R_eff(v_ms,player_break)
+            reward_eff = self.RL.R_eff(v_ms)
             reward_comfort = self.RL.R_comfort(a_ms)
-            reward = reward_eff + reward_comfort
+            reward_break = self.RL.R_break(player_break)
+            reward_throt = self.RL.R_throt(player_throt)
+            reward = reward_eff + reward_comfort + reward_break + reward_throt
         elif Out_of_RL:
             reward = 0
         
         #self.collision_sensor.collision_hist
-        print(self.collision_sensor.collision_hist)
+        #print(self.collision_sensor.collision_hist)
         reward_collision = self.RL.R_collide(self.collision_sensor.collision_hist)
         reward = reward + reward_collision
         done = self.RL.done
-        #if len(self.collision_hist)!=0:
-        print(reward_collision)
-           
+        
+        if done == True:
+            self.col_num = self.col_numc+1
         #player_state = self.get_state(self.player)
-        #reward_safe = self.RL.R_safe(emergency_brake)
-        #reward_eff = self.RL.R_eff(v_s)
-        #reward_comfort = self.RL.R_comfort(a_s)
         #done,reward = self.RL.cal_reward(self.collision_hist,player_state)
         
 
         #getting observation_space
-        obs = self.process_bev()
+        #obs = self.process_bev()
+        obs = self.get_obs(self.player,self.walker1)
         info = dict()
        
-        
-            
+       
         # if action from RL leads to out of range or collision, activate the control signal from safe action module
-        if self.total_step == 400 or self.player.get_location().x <= 455:
+        if self.player.get_location().x <= 455 or self.total_step == 5000:
+            if self.player.get_location().x <= 455 and self.player.get_location().x > 450:
+                reward = reward + 4
             done = True
         
+        self.reward_total = self.reward_total+reward
         
-
         #print(done)
         if done == True:
+            #print(self.col_num)
             self.episode == self.episode + 1
             self.destroy()
-
+            self.RL.reset()
+            #print(self.reward_total)
+            self.cum_r.append(self.reward_total)
+            
        
         self.total_step = self.total_step+1
         
@@ -226,6 +262,7 @@ class World(gym.Env):
         self.actor_list = []
         self.collision_hist = []
         self.cumulative_reward = 0.0
+        self.reward_total = 0
         self.total_step = 0.0
         self.episode = 0.0
         self.previous_safe_action = None
@@ -242,7 +279,8 @@ class World(gym.Env):
         self.hud.notification(actor_type)
 
         # return obsrevation
-        obs = self.process_bev()
+        #obs = self.process_bev()
+        obs = self.get_obs(self.player,self.walker1)
         #print(obs.shape)
         return obs
        
@@ -250,7 +288,7 @@ class World(gym.Env):
     def spawn_player(self):
         """spawn player to the env"""
         model_3 = self.world.get_blueprint_library().filter("model3")[0]
-        self.transform = carla.Transform(carla.Location(x=550, y=-17.2, z=10),carla.Rotation(yaw=-180)) #map6
+        self.transform = carla.Transform(carla.Location(x=540, y=-17.2, z=10),carla.Rotation(yaw=-180)) #map6
         if self.player is not None:
             self.player.destroy()
         self.player = self.world.spawn_actor(model_3, self.transform)
@@ -284,12 +322,14 @@ class World(gym.Env):
         self.camera_manager.transform_index = cam_pos_id
         self.camera_manager.set_sensor(cam_index, notify=False)
         
+        '''
         #bird eye view
         self.birdview_producer = BirdViewProducer(
         self.player,  # carla.Client
         target_size=PixelDimensions(width=150, height=336),
         pixels_per_meter=4,
         crop_type=BirdViewCropType.FRONT_AND_REAR_AREA)
+        '''
 
         #collision sensor
         if self.collision_sensor is not None:
@@ -364,12 +404,23 @@ class World(gym.Env):
         v_xyz = car.get_velocity() #m/s
         heading_rad = t.rotation.yaw * (np.pi/180) #rad
         v_ms = math.sqrt(v_xyz.x**2 + v_xyz.z**2 + v_xyz.z**2)
+        a_ms = math.sqrt(a_xyz.x**2 + a_xyz.z**2 + a_xyz.z**2)
+        v_kmh = v_ms*3.6
+        a_kmh = a_ms*3.6
         x = loc_xyz.x
         y = loc_xyz.y
         
-        return [x,y,heading_rad,v_ms]
+        return [x,y,v_kmh,a_kmh]
+        #return [x,y,heading_rad,v_ms]
 
-    def get_obs(self, car):
+    def get_obs(self,player,walker):
+        player_obs = np.array(self.get_state(player)).reshape(1,-1) #(1,4)
+        walker_obs = np.array(self.get_state(walker)).reshape(1,-1) #(1,4)
+        obs = np.concatenate((player_obs, walker_obs), axis=0) #(2,4)
+        return obs
+
+
+    def get_loc(self, car):
         '''
         car:carla.Actor, type carla.Vehicle
         return: State of the car 

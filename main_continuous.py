@@ -8,6 +8,7 @@ import pygame
 from pygame.locals import KMOD_CTRL
 from pygame.locals import K_ESCAPE
 from pygame.locals import K_q
+import matplotlib.pyplot as plt
 
 try:
     #sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
@@ -56,7 +57,7 @@ def train_model(env_0, log_dir, log_name, train_num, model_name, train_time):
     model = PPO2(policy=MlpPolicy, env=env, verbose=1, tensorboard_log=log_dir,
                  policy_kwargs=policy_kwargs,
                  gamma=0.99,            # discount factor [0.8 0.99] 0.99
-                 n_steps=200,           #!! horizon [32 5000] [64 2048] 128
+                 n_steps=5000,           #!! horizon [32 5000] [64 2048] 128
                  ent_coef=0.01,          # entropy coefficient [0 0.001] 0.01
                  learning_rate=2.5e-4,    #!! learning rate [1e-3 1e-6] 2.5e-4
                  vf_coef=0.5,           # value function coefficient [0.5 1] 0.5
@@ -70,7 +71,10 @@ def train_model(env_0, log_dir, log_name, train_num, model_name, train_time):
     model.save(model_name)
     stats_path = os.path.join(log_dir, "vec_normalize_{}.pkl".format(train_num))
     env.save(stats_path)
-    print("Done training, total episodes executed = {}".format(env_0.total_epis))
+    #print("Done training, total episodes executed = {}".format(env_0.total_epis))
+    print("Done training, total steps executed = {}".format(train_time))
+    plt.plot(env_0.cum_r)
+    plt.savefig('average_reward.png')
 
 def evaluate_model(env, model_name, eval_step, log_dir, train_num):
     # EVALUATE
@@ -95,7 +99,7 @@ def evaluate_model(env, model_name, eval_step, log_dir, train_num):
 
 def main():
     train = False
-    train_num = 3
+    train_num = 18
     method = 'ppo'
     continuous = True
     log_dir = "./{}/".format(method)
@@ -105,10 +109,10 @@ def main():
     env = World()
     if train:
         log_name = "log_{}_WalkerCross_{}".format(method, train_num)
-        steps = 15000
+        steps = 1000000
         train_model(env, log_dir, log_name, train_num, model_name, steps)
     else:
-        steps = 1500
+        steps = 15000
         evaluate_model(env, model_name, steps, log_dir, train_num)
     #env.destroy_all()
     #env.quit_pygame()

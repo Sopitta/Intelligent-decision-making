@@ -3,3 +3,4 @@ __pycache__/
 ppo/
 .vs/
 birdview_v2_cache
+*.png
