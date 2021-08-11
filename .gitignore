@@ -4,3 +4,4 @@ ppo/
 .vs/
 birdview_v2_cache/
 *.png
+*.xlsx
