@@ -25,7 +25,7 @@ class RL(object):
 
 		#self.cumulative_reward = self.cumulative_reward+self.reward
 		return self.done,self.reward
-	def R_safe(self,emergency_brake): #R_safe(self.emergency_brake)
+	def R_safe(self,emergency_brake):
 		if emergency_brake:
 			reward_safe = -30
 		else:

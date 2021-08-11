@@ -20,6 +20,7 @@ import math
 import os
 import re
 import matplotlib.pyplot as plt
+import random
 
 import carla
 from carla import ColorConverter as cc
@@ -83,7 +84,7 @@ class World(gym.Env):
         self.total_step = 0
         self.episode = 0
         self.STEER_AMT = 1.0
-        self.collision_hist = []
+        self.collision_num = []
         self.RL = RL()
         self.agent = None
         self.high_level = None
@@ -92,6 +93,8 @@ class World(gym.Env):
         self.col_num = 0
         self.cum_r = []
         self.reward_total = 0
+        self.em_num = 0
+        self.em_num_list = []
 
         #pygame
         self.display = pygame.display.set_mode((1280, 720),pygame.HWSURFACE | pygame.DOUBLEBUF)
@@ -117,13 +120,20 @@ class World(gym.Env):
         #walker
         control_w = carla.WalkerControl()
         #control_w.speed = 0.6
+        if self.start_episode == True:
+            print(self.em_num)
+            self.random_speed = round(random.uniform(0,1),2)
+            while self.random_speed <= 0.15:
+                self.random_speed = round(random.uniform(0,1),2)
+            print(self.random_speed)
         control_w.direction.y = 1
         control_w.direction.x = 0
         control_w.direction.z = 0
         if self.walker1.get_location().y > -10:
             control_w.speed = 0
         else:
-            control_w.speed = 0.65
+            control_w.speed = self.random_speed
+        
         self.walker1.apply_control(control_w)
         #print(self.walker1.get_location().y)
         
@@ -132,7 +142,6 @@ class World(gym.Env):
 
         #find euclidian Distance
         obs_player = self.get_loc(self.player)
-        #print(obs_player)
         obs_walker = self.get_loc(self.walker1)
         e_dist = self.euclidean_dist(obs_player,obs_walker)
 
@@ -149,19 +158,36 @@ class World(gym.Env):
         v_ms = math.sqrt(vel.x**2 + vel.z**2 + vel.z**2)
         a_ms = math.sqrt(acc.x**2 + acc.z**2 + acc.z**2)
         v_kmh = v_ms*3.6
-
+        a_ms_brake = -3.5
+        the = 2 
         if v_kmh <= 20:
-            break_dist = 7
+            #break_dist = 7
+            safe_dist = ((0-(20/3.6)**2)/(2*a_ms_brake))
+            
         elif v_kmh > 20 and v_kmh <= 25:
-            break_dist = 8.5 
+            #break_dist = 8.5 
+            safe_dist = ((0-(25/3.6)**2)/(2*a_ms_brake))
+            
         elif v_kmh > 25 and v_kmh <= 30:
-            break_dist = 10
+            #break_dist = 10
+            safe_dist = ((0-(30/3.6)**2)/(2*a_ms_brake))
+            
         elif v_kmh > 30 and v_kmh <= 35:
-            break_dist = 11.5
+            #break_dist = 11.5
+            safe_dist = ((0-(35/3.6)**2)/(2*a_ms_brake))
+            
         else:
-            break_dist = 13
+            #break_dist = 13
+            safe_dist = ((0-(45/3.6)**2)/(2*a_ms_brake))
+            
+        
 
-        if e_dist < break_dist and self.walker1.get_location().y - self.player.get_location().y <= 3.2 :
+        break_dist = safe_dist + the
+        #break_dist = ((0-v_ms**2)/(2*a_ms_brake))+the
+        #safe_dist_side = abs(-17.2
+
+
+        if e_dist <= break_dist and self.walker1.get_location().y - self.player.get_location().y <= 3.2 :
 
             emergency_brake = True
             control_p = carla.VehicleControl()
@@ -205,6 +231,11 @@ class World(gym.Env):
         
         if emergency_brake:
             reward = -10
+            if self.player.get_location().z < 0.005 and self.player.get_location().z > 0:
+                self.em_num = self.em_num + 1
+                #print(break_dist)
+                #print(self.player.get_location().z)
+                #print(a_ms)
         elif use_RL:
             #reward_safe = self.RL.R_safe(emergency_brake)
             reward_eff = self.RL.R_eff(v_ms)
@@ -212,6 +243,7 @@ class World(gym.Env):
             reward_break = self.RL.R_break(player_break)
             reward_throt = self.RL.R_throt(player_throt)
             reward = reward_eff + reward_comfort + reward_break + reward_throt
+            #print(break_dist)
         elif Out_of_RL:
             reward = 0
         
@@ -222,7 +254,7 @@ class World(gym.Env):
         done = self.RL.done
         
         if done == True:
-            self.col_num = self.col_numc+1
+            self.col_num = self.col_num+1
         #player_state = self.get_state(self.player)
         #done,reward = self.RL.cal_reward(self.collision_hist,player_state)
         
@@ -234,7 +266,7 @@ class World(gym.Env):
        
        
         # if action from RL leads to out of range or collision, activate the control signal from safe action module
-        if self.player.get_location().x <= 455 or self.total_step == 5000:
+        if self.player.get_location().x <= 455 or self.total_step == 6500:
             if self.player.get_location().x <= 455 and self.player.get_location().x > 450:
                 reward = reward + 4
             done = True
@@ -244,14 +276,21 @@ class World(gym.Env):
         #print(done)
         if done == True:
             #print(self.col_num)
+            #print(self.total_step)
             self.episode == self.episode + 1
             self.destroy()
             self.RL.reset()
             #print(self.reward_total)
+            self.collision_num.append(self.col_num)
             self.cum_r.append(self.reward_total)
+            self.col_num = 0
+            #print(self.em_num)
+            self.em_num_list.append(self.em_num)
             
        
         self.total_step = self.total_step+1
+        if self.total_step == 1:
+            self.start_episode = False
         
         #print(action)
         return obs, reward, done, info
@@ -260,23 +299,22 @@ class World(gym.Env):
     def reset(self):
         
         self.actor_list = []
-        self.collision_hist = []
+        #self.collision_num = []
         self.cumulative_reward = 0.0
         self.reward_total = 0
         self.total_step = 0.0
         self.episode = 0.0
+        self.em_num = 0
         self.previous_safe_action = None
         self.spawn_player()
-        #self.spawn_others()
         self.spawn_sensors()
         self.spawn_walker()
         self.agent = Agent(self.player)
-        #self.high_level = HighLevelSC(self.world)
-        #self.safety_rules = safety_rules()
         self.dest = carla.Transform(carla.Location(x=400, y=-17.2, z= 0.0))
         self.agent.set_destination((self.dest.location.x,self.dest.location.y,self.dest.location.z))
         actor_type = get_actor_display_name(self.player)
         self.hud.notification(actor_type)
+        self.start_episode = True
 
         # return obsrevation
         #obs = self.process_bev()
@@ -288,7 +326,7 @@ class World(gym.Env):
     def spawn_player(self):
         """spawn player to the env"""
         model_3 = self.world.get_blueprint_library().filter("model3")[0]
-        self.transform = carla.Transform(carla.Location(x=540, y=-17.2, z=10),carla.Rotation(yaw=-180)) #map6
+        self.transform = carla.Transform(carla.Location(x=540, y=-17.2, z=5.0),carla.Rotation(yaw=-180)) #map6
         if self.player is not None:
             self.player.destroy()
         self.player = self.world.spawn_actor(model_3, self.transform)
@@ -339,7 +377,7 @@ class World(gym.Env):
     def spawn_walker(self):
         #walker_bp = random.choice(self.world.get_blueprint_library().filter('walker'))
         walker_bp = self.world.get_blueprint_library().filter('walker')[3]
-        self.transform_walk = carla.Transform(carla.Location(x=490, y=-22, z= 10.0),carla.Rotation(yaw=-180))
+        self.transform_walk = carla.Transform(carla.Location(x=490, y=-22, z= 5.0),carla.Rotation(yaw=-180))
         if self.walker1 is not None:
             self.walker1.destroy()
         self.walker1 = self.world.spawn_actor(walker_bp, self.transform_walk)
