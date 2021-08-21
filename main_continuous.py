@@ -23,7 +23,7 @@ except IndexError:
 
 import carla
 #from env import CarEnv, World, HUD
-from Env.env_continuous import World, HUD
+from Env.env_continuous_2 import World, HUD
 #from agent.myagent import Agent
 from high_level_sc import HighLevelSC
 from stable_baselines import DQN #get action from DQN and evn.step(action)
@@ -59,7 +59,8 @@ def train_model(env_0, log_dir, log_name, train_num, model_name, train_time, loa
                            epsilon=1e-08)
     # Custom MLP policy of three layers of size 128 each with tanh activation function
     # policy_kwargs = dict(act_fun=tf.nn.tanh, net_arch=[128, 128, 128])
-    lr_schedule = LinearSchedule(train_time, final_p=1e-3, initial_p=1e-5)
+    lr_schedule = LinearSchedule(train_time, final_p=1e-6, initial_p=1e-3)
+    #use with lr_schedule.value
     policy_kwargs = dict(net_arch=[128, 128, 128])
     model = PPO2(policy=MlpPolicy, env=env, verbose=1, tensorboard_log=log_dir,
                  policy_kwargs=policy_kwargs,
@@ -92,6 +93,10 @@ def train_model(env_0, log_dir, log_name, train_num, model_name, train_time, loa
     plt.plot(env_0.em_num_list)
     plt.savefig('emergency_break_'+str(train_num)+'.png')
     plt.close()
+    eff_arr = np.array(env_0.cum_eff)
+    np.save('reward_eff_per_ep_'+str(train_num)+'.npy', eff_arr)
+    comfort_arr = np.array(env_0.cum_comfort)
+    np.save('reward_comfort_per_ep_'+str(train_num)+'.npy', comfort_arr)
 
 def evaluate_model(env, model_name, eval_step, log_dir, train_num):
     # EVALUATE
@@ -115,9 +120,9 @@ def evaluate_model(env, model_name, eval_step, log_dir, train_num):
 # os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 def main():
-    train = True
+    train = False
     load = False
-    train_num = 29
+    train_num = 41
     method = 'ppo'
     continuous = True
     log_dir = "./{}/".format(method)
@@ -127,10 +132,10 @@ def main():
     env = World()
     if train:
         log_name = "log_{}_WalkerCross_{}".format(method, train_num)
-        steps = 15000
+        steps = 13000000
         train_model(env, log_dir, log_name, train_num, model_name, steps, load = load)
     else:
-        steps = 4500
+        steps = 15000
         evaluate_model(env, model_name, steps, log_dir, train_num)
     #env.destroy_all()
     #env.quit_pygame()

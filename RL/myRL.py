@@ -34,18 +34,23 @@ class RL(object):
 	def R_eff(self,speed):
 		speed_kmh = speed*3.6
 		#reward_speed = -abs(speed_kmh-20)+13
+		'''
 		if speed_kmh >= 0 and speed_kmh <=1:
-			reward_speed = 0
+			#reward_speed = -1
+			reward_speed = -0.5
+			#reward_speed = 0
 		elif speed_kmh > 1 and speed_kmh <=3:
 			reward_speed = 1
 		elif speed_kmh > 3 and speed_kmh <=15:
-			reward_speed = 3
+			#reward_speed = 3
+			reward_speed = 2
 		elif speed_kmh > 15 and speed_kmh <=20:
-			reward_speed = 5
+			#reward_speed = 5
+			reward_speed = 3
 		elif speed_kmh > 20 :
 			#reward_speed = -6 * speed_kmh + 138
 			reward_speed = 0
-		'''
+		
 		if speed_kmh >= 0 and speed_kmh <=3:
 			reward_speed = reward_speed - 10
 		
@@ -55,11 +60,22 @@ class RL(object):
 			reward_break = 0
 		reward_eff = reward_speed + reward_break
 		'''
+		if speed_kmh >= 0 and speed_kmh <1:
+			reward_speed = -1
+		elif speed_kmh >= 1 and speed_kmh <5:
+			reward_speed = (0.25*speed_kmh)-0.25
+		elif speed_kmh >= 5 and speed_kmh <20:
+			reward_speed = ((4/15)*speed_kmh)-(1/3)
+		elif speed_kmh >= 20 and speed_kmh <=25:
+			reward_speed = -speed_kmh+25
+		elif speed_kmh > 25 :
+			#reward_speed = -6 * speed_kmh + 138
+			reward_speed = -1
 		return reward_speed
 	def R_comfort(self,acc):
 		acc_kmh = acc*3.6
-		if acc_kmh <= 7.2:
-			reward_comfort = 2
+		if 0.5 < acc_kmh <= 7.2:
+			reward_comfort = 1
 		else:
 			#reward_comfort = (-1.5 * acc_kmh) + 7.2
 			reward_comfort = 0
@@ -89,14 +105,6 @@ class RL(object):
 	def reset(self):
 		self.done = False
 		
-			
-	
-		
-		
-
-
-			
-	#if collision -1000, else 1
 
 
 

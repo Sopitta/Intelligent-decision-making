@@ -43,10 +43,9 @@ class World(gym.Env):
         client.set_timeout(4.0)
 
         #initialize pygame
-        os.environ["SDL_VIDEODRIVER"] = "dummy" #use this to make pygame headless
+        #os.environ["SDL_VIDEODRIVER"] = "dummy" #use this to make pygame headless
         pygame.init()
         pygame.font.init()
-
         hud = HUD(1280, 720)
         self.world = client.load_world('Town06')
         self.map = self.world.get_map()
@@ -92,7 +91,11 @@ class World(gym.Env):
         self.safety_rules = None
         self.col_num = 0
         self.cum_r = []
+        self.cum_eff = []
+        self.cum_comfort = []
         self.reward_total = 0
+        self.reward_eff_total = 0
+        self.reward_comfort_total = 0
         self.em_num = 0
         self.em_num_list = []
 
@@ -120,13 +123,8 @@ class World(gym.Env):
         #walker
         control_w = carla.WalkerControl()
         #control_w.speed = 0.6
-        if self.start_episode == True:
-            #print(self.em_num)
-            self.random_speed = round(random.uniform(0,1),2)
-            while self.random_speed <= 0.15:
-                self.random_speed = round(random.uniform(0,1),2)
-            #print(self.random_speed)
-        #self.random_speed = 0.2 #remove later
+        
+        self.random_speed = 0.6
         control_w.direction.y = 1
         control_w.direction.x = 0
         control_w.direction.z = 0
@@ -135,7 +133,8 @@ class World(gym.Env):
         else:
             control_w.speed = self.random_speed
         
-        self.walker1.apply_control(control_w)
+        if self.player.get_location().x - self.walker1.get_location().x <= 50:
+            self.walker1.apply_control(control_w)
         #print(self.walker1.get_location().y)
         
         #player
@@ -186,6 +185,8 @@ class World(gym.Env):
         break_dist = safe_dist + the
         #break_dist = ((0-v_ms**2)/(2*a_ms_brake))+the
         #safe_dist_side = abs(-17.2
+        #RL_zone = 25
+        RL_zone = 30
 
 
         if e_dist <= break_dist and self.walker1.get_location().y - self.player.get_location().y <= 3.2 :
@@ -199,7 +200,7 @@ class World(gym.Env):
             control_p.manual_gear_shift = False        
 
         else:
-            if abs(self.player.get_location().x - self.walker1.get_location().x) <= 35: #activate > RL
+            if abs(self.player.get_location().x - self.walker1.get_location().x) <= RL_zone: #activate > RL
                 #use control_p from RL
                 use_RL = True
                 control_s = self.agent.run_step()
@@ -222,16 +223,9 @@ class World(gym.Env):
         player_break = control_p.brake
         player_throt = control_p.throttle
         self.player.apply_control(control_p)
-        #print(control_p)
-        #print(emergency_brake)
-        #print(use_RL)
-        #print(Out_of_RL)
 
-       
-       
-        
         if emergency_brake:
-            reward = -10
+            reward = -6
             if self.player.get_location().z < 0.005 and self.player.get_location().z > 0:
                 self.em_num = self.em_num + 1
                 #print(break_dist)
@@ -239,17 +233,26 @@ class World(gym.Env):
                 #print(a_ms)
         elif use_RL:
             #reward_safe = self.RL.R_safe(emergency_brake)
+            acc = self.player.get_acceleration()
+            vel = self.player.get_velocity()
+            v_ms = math.sqrt(vel.x**2 + vel.z**2 + vel.z**2)
+            a_ms = math.sqrt(acc.x**2 + acc.z**2 + acc.z**2)
             reward_eff = self.RL.R_eff(v_ms)
             reward_comfort = self.RL.R_comfort(a_ms)
             reward_break = self.RL.R_break(player_break)
             reward_throt = self.RL.R_throt(player_throt)
-            reward = reward_eff + reward_comfort + reward_break + reward_throt
-            #print(break_dist)
+            if -0.1 <action < 0.1:
+                reward_action = -2
+            else:
+                reward_action = 0
+
+            reward = reward_eff + reward_comfort+reward_break+reward_throt+reward_action
+            self.reward_eff_total = self.reward_eff_total + reward_eff
+            self.reward_comfort_total = self.reward_comfort_total + reward_comfort
         elif Out_of_RL:
             reward = 0
-        
-        #self.collision_sensor.collision_hist
-        #print(self.collision_sensor.collision_hist)
+            
+       
         reward_collision = self.RL.R_collide(self.collision_sensor.collision_hist)
         reward = reward + reward_collision
         done = self.RL.done
@@ -267,26 +270,24 @@ class World(gym.Env):
        
        
         # if action from RL leads to out of range or collision, activate the control signal from safe action module
-        if self.player.get_location().x <= 455 or self.total_step == 6500:
-            if self.player.get_location().x <= 455 and self.player.get_location().x > 450:
-                reward = reward + 4
+        if self.player.get_location().x <= (self.walker_x_location - RL_zone - 5) or self.total_step == 6000:
             done = True
         
         self.reward_total = self.reward_total+reward
         
+        
         #print(done)
         if done == True:
-            #print(self.col_num)
-            #print(self.total_step)
+            
             self.episode == self.episode + 1
             self.destroy()
             self.RL.reset()
-            #print(self.reward_total)
             self.collision_num.append(self.col_num)
             self.cum_r.append(self.reward_total)
             self.col_num = 0
-            #print(self.em_num)
             self.em_num_list.append(self.em_num)
+            self.cum_eff.append(self.reward_eff_total)
+            self.cum_comfort.append(self.reward_comfort_total)
             
        
         self.total_step = self.total_step+1
@@ -311,11 +312,15 @@ class World(gym.Env):
         self.spawn_sensors()
         self.spawn_walker()
         self.agent = Agent(self.player)
-        self.dest = carla.Transform(carla.Location(x=400, y=-17.2, z= 0.0))
+        #self.dest = carla.Transform(carla.Location(x=400, y=-17.2, z= 0.0))
+        self.dest = carla.Transform(carla.Location(x=self.walker_x_location-30, y=-17.2, z= 0.0))
         self.agent.set_destination((self.dest.location.x,self.dest.location.y,self.dest.location.z))
         actor_type = get_actor_display_name(self.player)
         self.hud.notification(actor_type)
         self.start_episode = True
+
+        self.reward_eff_total = 0
+        self.reward_comfort_total = 0
 
         # return obsrevation
         #obs = self.process_bev()
@@ -378,7 +383,9 @@ class World(gym.Env):
     def spawn_walker(self):
         #walker_bp = random.choice(self.world.get_blueprint_library().filter('walker'))
         walker_bp = self.world.get_blueprint_library().filter('walker')[3]
-        self.transform_walk = carla.Transform(carla.Location(x=490, y=-22, z= 5.0),carla.Rotation(yaw=-180))
+        #self.walker_x_location = float(random.randint(450,490))
+        self.walker_x_location = 490.0
+        self.transform_walk = carla.Transform(carla.Location(x=self.walker_x_location, y=-22, z= 5.0),carla.Rotation(yaw=-180))
         if self.walker1 is not None:
             self.walker1.destroy()
         self.walker1 = self.world.spawn_actor(walker_bp, self.transform_walk)
