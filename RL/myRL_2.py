@@ -14,7 +14,7 @@ class RL(object):
 	def calculate_jerk(self):
 		pass
 	def cal_reward(self,collision_hist,player_state):
-		#print('calculating reward')
+		
 		if len(collision_hist) != 0:
 			self.done = True
 			self.reward = -100
@@ -35,16 +35,21 @@ class RL(object):
 		speed_kmh = speed*3.6
 		#reward_speed = -abs(speed_kmh-20)+13
 		if speed_kmh >= 0 and speed_kmh <=1:
-			reward_speed = 0
+			#reward_speed = 0
+			reward_speed = -1
 		elif speed_kmh > 1 and speed_kmh <=3:
-			reward_speed = 1
+			#reward_speed = 1
+			reward_speed = 2
 		elif speed_kmh > 3 and speed_kmh <=15:
-			reward_speed = 3
+			#reward_speed = 3
+			reward_speed = 4
 		elif speed_kmh > 15 and speed_kmh <=20:
-			reward_speed = 5
+			#reward_speed = 5
+			reward_speed = 4
 		elif speed_kmh > 20 :
 			#reward_speed = -6 * speed_kmh + 138
-			reward_speed = 0
+			#reward_speed = 0
+			reward_speed = -1
 		'''
 		if speed_kmh >= 0 and speed_kmh <=3:
 			reward_speed = reward_speed - 10

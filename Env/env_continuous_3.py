@@ -25,7 +25,7 @@ import random
 import carla
 from carla import ColorConverter as cc
 from carla_birdeye_view import BirdViewProducer, BirdViewCropType, PixelDimensions
-from RL.myRL import RL
+from RL.myRL_2 import RL
 import gym
 from gym import spaces
 from stable_baselines.common.env_checker import check_env
@@ -220,7 +220,8 @@ class World(gym.Env):
         if emergency_brake or use_RL:
             
             if emergency_brake:
-                reward_em = -10
+                #reward_em = -10
+                reward_em = -25
                 if self.player.get_location().z < 0.005 and self.player.get_location().z > 0:
                     self.em_num = self.em_num + 1
             else:
@@ -265,7 +266,7 @@ class World(gym.Env):
        
        
         # if action from RL leads to out of range or collision, activate the control signal from safe action module
-        if self.player.get_location().x <= (self.walker_x_location - RL_zone - 5) or self.total_step == 6000:
+        if self.player.get_location().x <= (self.walker_x_location - RL_zone) or self.total_step == 6000:
             done = True
         
         self.reward_total = self.reward_total+reward

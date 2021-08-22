@@ -23,7 +23,7 @@ except IndexError:
 
 import carla
 #from env import CarEnv, World, HUD
-from Env.env_continuous_2 import World, HUD
+from Env.env_continuous_3 import World, HUD
 #from agent.myagent import Agent
 from high_level_sc import HighLevelSC
 from stable_baselines import DQN #get action from DQN and evn.step(action)
@@ -59,13 +59,13 @@ def train_model(env_0, log_dir, log_name, train_num, model_name, train_time, loa
                            epsilon=1e-08)
     # Custom MLP policy of three layers of size 128 each with tanh activation function
     # policy_kwargs = dict(act_fun=tf.nn.tanh, net_arch=[128, 128, 128])
-    lr_schedule = LinearSchedule(train_time, final_p=1e-6, initial_p=1e-3)
+    lr_schedule = LinearSchedule(train_time, final_p=1e-4, initial_p=1e-3)
     #use with lr_schedule.value
     policy_kwargs = dict(net_arch=[128, 128, 128])
     model = PPO2(policy=MlpPolicy, env=env, verbose=1, tensorboard_log=log_dir,
                  policy_kwargs=policy_kwargs,
                  gamma=0.99,            # discount factor [0.8 0.99] 0.99
-                 n_steps=5000,           #!! horizon [32 5000] [64 2048] 128
+                 n_steps=8000,           #!! horizon [32 5000] [64 2048] 128
                  ent_coef=0.01,          # entropy coefficient [0 0.001] 0.01
                  learning_rate=lr_schedule.value,    #!! learning rate [1e-3 1e-6] 2.5e-4
                  vf_coef=0.5,           # value function coefficient [0.5 1] 0.5
@@ -122,7 +122,7 @@ def evaluate_model(env, model_name, eval_step, log_dir, train_num):
 def main():
     train = False
     load = False
-    train_num = 41
+    train_num = 43
     method = 'ppo'
     continuous = True
     log_dir = "./{}/".format(method)
@@ -132,7 +132,7 @@ def main():
     env = World()
     if train:
         log_name = "log_{}_WalkerCross_{}".format(method, train_num)
-        steps = 13000000
+        steps = 1200000
         train_model(env, log_dir, log_name, train_num, model_name, steps, load = load)
     else:
         steps = 15000
