@@ -1,0 +1,5 @@
+48
+learning rate 5e10-4
+
+49
+lr_schedule = LinearSchedule(train_time, final_p=1e-4, initial_p=5e-4)

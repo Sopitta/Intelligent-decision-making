@@ -23,15 +23,17 @@ except IndexError:
 
 import carla
 #from env import CarEnv, World, HUD
+#from Env.env_continuous_3 import World, HUD, TensorboardCallback
 from Env.env_continuous_3 import World, HUD
 #from agent.myagent import Agent
 from high_level_sc import HighLevelSC
-from stable_baselines import DQN #get action from DQN and evn.step(action)
 from stable_baselines.common.env_checker import check_env
 from stable_baselines import PPO2
 from stable_baselines.common.policies import MlpPolicy
 from stable_baselines.common.vec_env import DummyVecEnv, VecNormalize
-from stable_baselines.common.schedules import LinearSchedule
+#from stable_baselines.common.schedules import LinearSchedule
+#from stable_baselines.common.schedules import PiecewiseSchedule
+from stable_baselines.common.schedules import linear_interpolation, get_schedule_fn
 
 
 #train = True
@@ -44,11 +46,13 @@ from stable_baselines.common.schedules import LinearSchedule
 #env = World()
 
 def train_model(env_0, log_dir, log_name, train_num, model_name, train_time, load = False):
-    #callback = TensorboardCallback(env=env_0)
+    callback = TensorboardCallback(env=env_0)
     # Input features and reward normalization
     #print(load)
     env = DummyVecEnv([lambda: env_0])
     if load:
+        method = 'ppo'
+        model_name_prev = "./{}/{}_WalkerCross_{}".format(method, method, train_num-1)
         stats_path_prev = os.path.join(log_dir, "vec_normalize_{}.pkl".format(train_num-1))
         env = VecNormalize.load(stats_path_prev, env)
     else: #train from scratch
@@ -59,22 +63,33 @@ def train_model(env_0, log_dir, log_name, train_num, model_name, train_time, loa
                            epsilon=1e-08)
     # Custom MLP policy of three layers of size 128 each with tanh activation function
     # policy_kwargs = dict(act_fun=tf.nn.tanh, net_arch=[128, 128, 128])
-    lr_schedule = LinearSchedule(train_time, final_p=1e-4, initial_p=1e-3)
+    #lr_schedule = LinearSchedule(train_time, final_p=1e-5, initial_p=1e-4)
+    #lr_schedule = LinearSchedule(schedule_timesteps = train_time, final_p = 1e-5, initial_p=1.0)
+    lr = ReduceSchedule(initial_p=1e-4)
+    #endpoints_1 = [(1000000,1e-4),(3000000,7.5e-5),(5000000,5e-5)]
+    #endpoints_2 = [(0, 1e-3),(10000,1e-4),(30000,1e-5)]
+    #lr = PiecewiseSchedule(endpoints = endpoints_2,interpolation=linear_interpolation,outside_value=1e-5)
     #use with lr_schedule.value
     policy_kwargs = dict(net_arch=[128, 128, 128])
     model = PPO2(policy=MlpPolicy, env=env, verbose=1, tensorboard_log=log_dir,
                  policy_kwargs=policy_kwargs,
                  gamma=0.99,            # discount factor [0.8 0.99] 0.99
-                 n_steps=8000,           #!! horizon [32 5000] [64 2048] 128
+                 n_steps=16000,           #!! horizon [32 5000] [64 2048] 128 #8000
                  ent_coef=0.01,          # entropy coefficient [0 0.001] 0.01
-                 learning_rate=lr_schedule.value,    #!! learning rate [1e-3 1e-6] 2.5e-4
+                 learning_rate=2.5e-4,    #!! learning rate [1e-3 1e-6] 2.5e-4
                  vf_coef=0.5,           # value function coefficient [0.5 1] 0.5
                  max_grad_norm=0.5,     # [] 0.5
                  lam=0.9,               # [0.9 1] 0.9
-                 nminibatches=4,        #!! minibatch [4 4096] con [512 5120], des [32 512] 4
-                 noptepochs=4,          #!! epoch [3 30] 4
-                 cliprange=0.2)         #!! clipping [0.1 0.3] 0.2
+                 nminibatches=50,        #!! minibatch [4 4096] con [512 5120], des [32 512] 4
+                 noptepochs=50,          #!! epoch [3 30] 4
+                 cliprange=0.2,          #!! clipping [0.1 0.3] 0.2
+                 seed= 540)         
     #model.learn(total_timesteps=train_time, tb_log_name=log_name, callback=callback)
+    if load:
+        #model.set_env(env)
+        model = PPO2.load(model_name_prev)
+        model.set_env(env)
+    #model.learn(total_timesteps=train_time, tb_log_name=log_name,callback=callback)
     model.learn(total_timesteps=train_time, tb_log_name=log_name)
     model.save(model_name)
     stats_path = os.path.join(log_dir, "vec_normalize_{}.pkl".format(train_num))
@@ -97,6 +112,14 @@ def train_model(env_0, log_dir, log_name, train_num, model_name, train_time, loa
     np.save('reward_eff_per_ep_'+str(train_num)+'.npy', eff_arr)
     comfort_arr = np.array(env_0.cum_comfort)
     np.save('reward_comfort_per_ep_'+str(train_num)+'.npy', comfort_arr)
+    throt_arr = np.array(env_0.cum_throt)
+    np.save('reward_throt_per_ep_'+str(train_num)+'.npy', throt_arr)
+    break_arr = np.array(env_0.cum_break)
+    np.save('reward_break_per_ep_'+str(train_num)+'.npy', break_arr)
+    action_arr = np.array(env_0.cum_action)
+    np.save('reward_action_per_ep_'+str(train_num)+'.npy', action_arr)
+    em_arr_reward = np.array(env_0.cum_em)
+    np.save('reward_em_per_ep_'+str(train_num)+'.npy', em_arr_reward)
 
 def evaluate_model(env, model_name, eval_step, log_dir, train_num):
     # EVALUATE
@@ -120,9 +143,9 @@ def evaluate_model(env, model_name, eval_step, log_dir, train_num):
 # os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 def main():
-    train = False
+    train = True
     load = False
-    train_num = 43
+    train_num = 54
     method = 'ppo'
     continuous = True
     log_dir = "./{}/".format(method)
@@ -132,13 +155,35 @@ def main():
     env = World()
     if train:
         log_name = "log_{}_WalkerCross_{}".format(method, train_num)
-        steps = 1200000
+        steps = 12500000
         train_model(env, log_dir, log_name, train_num, model_name, steps, load = load)
     else:
-        steps = 15000
+        steps = 20000
         evaluate_model(env, model_name, steps, log_dir, train_num)
     #env.destroy_all()
     #env.quit_pygame()
+
+class ReduceSchedule(object):
+    """
+    Linear interpolation between initial_p and final_p over
+    schedule_timesteps. After this many timesteps pass final_p is
+    returned.
+
+    :param schedule_timesteps: (int) Number of timesteps for which to linearly anneal initial_p to final_p
+    :param initial_p: (float) initial output value
+    :param final_p: (float) final output value
+    """
+
+    def __init__(self, initial_p):
+        #self.schedule_timesteps = schedule_timesteps
+        #self.final_p = final_p
+        self.initial_p = initial_p
+
+    def value(self, frac):
+        fraction = min(frac, 1.0)
+        if fraction<0.1:
+            fraction = 0.1     
+        return self.initial_p * fraction
 
 if __name__ == '__main__':
     main()

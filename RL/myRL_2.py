@@ -27,7 +27,8 @@ class RL(object):
 		return self.done,self.reward
 	def R_safe(self,emergency_brake):
 		if emergency_brake:
-			reward_safe = -30
+			#reward_safe = -30
+			reward_safe = -25
 		else:
 			reward_safe = 0
 		return reward_safe
@@ -44,8 +45,8 @@ class RL(object):
 			#reward_speed = 3
 			reward_speed = 4
 		elif speed_kmh > 15 and speed_kmh <=20:
-			#reward_speed = 5
-			reward_speed = 4
+			reward_speed = 5
+			#reward_speed = 4 #44,45,45 use this
 		elif speed_kmh > 20 :
 			#reward_speed = -6 * speed_kmh + 138
 			#reward_speed = 0
@@ -61,10 +62,11 @@ class RL(object):
 		reward_eff = reward_speed + reward_break
 		'''
 		return reward_speed
-	def R_comfort(self,acc):
-		acc_kmh = acc*3.6
-		if acc_kmh <= 7.2:
+	def R_comfort(self,a_ms,a_sim):
+		acc_kmh = a_ms*3.6
+		if acc_kmh <= 7.2 and a_sim >=0:
 			reward_comfort = 2
+			#reward_comfort = 1
 		else:
 			#reward_comfort = (-1.5 * acc_kmh) + 7.2
 			reward_comfort = 0
@@ -72,14 +74,16 @@ class RL(object):
 
 	def R_break(self,player_break):
 		if player_break >= 0.8:
-			reward_break = -2
+			#reward_break = -2
+			reward_break = -1
 		else:
 			reward_break = 0
 		return reward_break
 
 	def R_throt(self,player_throt):
 		if player_throt >= 0.8:
-			reward_throt = -2
+			#reward_throt = -2
+			reward_throt = -1
 		else:
 			reward_throt = 0
 		return reward_throt

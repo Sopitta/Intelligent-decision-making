@@ -17,7 +17,6 @@ import collections
 import datetime
 import logging
 import math
-import os
 import re
 import matplotlib.pyplot as plt
 import random
@@ -30,8 +29,30 @@ import gym
 from gym import spaces
 from stable_baselines.common.env_checker import check_env
 from agent.myagent import Agent
-from high_level_sc import HighLevelSC
-from RL.safety_rules import safety_rules
+from stable_baselines.common.callbacks import BaseCallback
+import tensorflow as tf
+'''
+class TensorboardCallback(BaseCallback):
+    def __init__(self, env: str):
+        super(TensorboardCallback, self).__init__(0)
+        self.env = env
+    def _on_step(self) -> bool:
+        summary = tf.Summary(value=[tf.Summary.Value(tag='Reward_total', simple_value=self.env.reward_total)])
+        self.locals['writer'].add_summary(summary, self.num_timesteps)
+        summary = tf.Summary(value=[tf.Summary.Value(tag='Reward_eff', simple_value=self.env.reward_eff_total)])
+        self.locals['writer'].add_summary(summary, self.num_timesteps)
+        summary = tf.Summary(value=[tf.Summary.Value(tag='Reward_comfort', simple_value=self.env.reward_comfort_total)])
+        self.locals['writer'].add_summary(summary, self.num_timesteps)
+        summary = tf.Summary(value=[tf.Summary.Value(tag='Reward_throttle', simple_value=self.env.reward_throt_total)])
+        self.locals['writer'].add_summary(summary, self.num_timesteps)
+        summary = tf.Summary(value=[tf.Summary.Value(tag='Reward_break', simple_value=self.env.reward_break_total)])
+        self.locals['writer'].add_summary(summary, self.num_timesteps)
+        summary = tf.Summary(value=[tf.Summary.Value(tag='Reward_action', simple_value=self.env.reward_action_total)])
+        self.locals['writer'].add_summary(summary, self.num_timesteps)
+        summary = tf.Summary(value=[tf.Summary.Value(tag='Reward_ADAS', simple_value=self.env.reward_em_total)])
+        self.locals['writer'].add_summary(summary, self.num_timesteps)
+        return True
+'''       
 
 
 class World(gym.Env):    
@@ -43,7 +64,7 @@ class World(gym.Env):
         client.set_timeout(4.0)
 
         #initialize pygame
-        #os.environ["SDL_VIDEODRIVER"] = "dummy" #use this to make pygame headless
+        os.environ["SDL_VIDEODRIVER"] = "dummy" #use this to make pygame headless
         pygame.init()
         pygame.font.init()
         hud = HUD(1280, 720)
@@ -93,9 +114,18 @@ class World(gym.Env):
         self.cum_r = []
         self.cum_eff = []
         self.cum_comfort = []
+        self.cum_throt = []
+        self.cum_break = []
+        self.cum_action = []
+        self.cum_em = []
+        #reward
         self.reward_total = 0
         self.reward_eff_total = 0
         self.reward_comfort_total = 0
+        self.reward_throt_total = 0
+        self.reward_break_total = 0
+        self.reward_action_total = 0
+        self.reward_em_total = 0
         self.em_num = 0
         self.em_num_list = []
 
@@ -135,7 +165,7 @@ class World(gym.Env):
         
         if self.player.get_location().x - self.walker1.get_location().x <= 50:
             self.walker1.apply_control(control_w)
-        
+        #print(self.walker_x_location)
         
         #player
         control_p = carla.VehicleControl()
@@ -233,7 +263,7 @@ class World(gym.Env):
             v_ms = math.sqrt(vel.x**2 + vel.z**2 + vel.z**2)
             a_ms = math.sqrt(acc.x**2 + acc.z**2 + acc.z**2)
             reward_eff = self.RL.R_eff(v_ms)
-            reward_comfort = self.RL.R_comfort(a_ms)
+            reward_comfort = self.RL.R_comfort(a_ms,acc.x)
             reward_break = self.RL.R_break(player_break)
             reward_throt = self.RL.R_throt(player_throt)
             if -0.1 <action < 0.1:
@@ -244,6 +274,10 @@ class World(gym.Env):
             reward = reward_eff + reward_comfort+reward_break+reward_throt+reward_action + reward_em
             self.reward_eff_total = self.reward_eff_total + reward_eff
             self.reward_comfort_total = self.reward_comfort_total + reward_comfort
+            self.reward_throt_total = self.reward_throt_total + reward_throt
+            self.reward_break_total = self.reward_break_total + reward_break
+            self.reward_action_total = self.reward_action_total + reward_action
+            self.reward_em_total = self.reward_em_total + reward_em
 
         elif Out_of_RL:
             reward = 0
@@ -266,8 +300,13 @@ class World(gym.Env):
        
        
         # if action from RL leads to out of range or collision, activate the control signal from safe action module
-        if self.player.get_location().x <= (self.walker_x_location - RL_zone) or self.total_step == 6000:
+        goal = self.player.get_location().x <= (self.walker_x_location - RL_zone +15)
+        if goal or self.total_step == 6000:
             done = True
+            almost_goal = self.player.get_location().x - (self.walker_x_location - RL_zone +15) <= 2
+            if goal or almost_goal  and self.em_num == 0:
+                reward = reward + 5000
+                
         
         self.reward_total = self.reward_total+reward
         
@@ -284,6 +323,10 @@ class World(gym.Env):
             self.em_num_list.append(self.em_num)
             self.cum_eff.append(self.reward_eff_total)
             self.cum_comfort.append(self.reward_comfort_total)
+            self.cum_throt.append(self.reward_throt_total)
+            self.cum_break.append(self.reward_break_total)
+            self.cum_action.append(self.reward_action_total)
+            self.cum_em.append(self.reward_em_total)
             
        
         self.total_step = self.total_step+1
@@ -315,8 +358,13 @@ class World(gym.Env):
         self.hud.notification(actor_type)
         self.start_episode = True
 
+        
         self.reward_eff_total = 0
         self.reward_comfort_total = 0
+        self.reward_throt_total = 0
+        self.reward_break_total = 0
+        self.reward_action_total = 0
+        self.reward_em_total = 0
 
         # return obsrevation
         #obs = self.process_bev()
@@ -329,8 +377,10 @@ class World(gym.Env):
         """spawn player to the env"""
         model_3 = self.world.get_blueprint_library().filter("model3")[0]
         self.transform = carla.Transform(carla.Location(x=540, y=-17.2, z=5.0),carla.Rotation(yaw=-180)) #map6
+        '''
         if self.player is not None:
             self.player.destroy()
+        '''
         self.player = self.world.spawn_actor(model_3, self.transform)
         self.actor_list.append(self.player)
         print(f'Player model is {self.player}.')
@@ -342,8 +392,10 @@ class World(gym.Env):
         #car1
         vehicle_bp = self.world.get_blueprint_library().filter("mercedes-benz")[0]
         self.transform1 = carla.Transform(carla.Location(x=490, y=-17.2, z= 10.0),carla.Rotation(yaw=-180))
+        '''
         if self.car1 is not None:
             self.car1.destroy()
+        '''
         self.car1 = self.world.spawn_actor(vehicle_bp, self.transform1)
         #self.car1.set_autopilot(True)
         #self.car1.apply_control(carla.VehicleControl(throttle=0.35, steer=0))
@@ -354,8 +406,10 @@ class World(gym.Env):
         """spawn sensors to the env"""
         #camera manager
         print('spawning sensors')
+        '''
         if self.camera_manager is not None:
             self.camera_manager.sensor.destroy()
+        '''
         cam_index = self.camera_manager.index if self.camera_manager is not None else 0
         cam_pos_id = self.camera_manager.transform_index if self.camera_manager is not None else 0
         self.camera_manager = CameraManager(self.player, self.hud, self._gamma)
@@ -372,18 +426,24 @@ class World(gym.Env):
         '''
 
         #collision sensor
+        '''
         if self.collision_sensor is not None:
             self.collision_sensor.sensor.destroy()
+        '''
         self.collision_sensor = CollisionSensor(self.player, self.hud)
 
     def spawn_walker(self):
         #walker_bp = random.choice(self.world.get_blueprint_library().filter('walker'))
         walker_bp = self.world.get_blueprint_library().filter('walker')[3]
-        #self.walker_x_location = float(random.randint(450,490))
-        self.walker_x_location = 490.0
+        #self.walker_x_location = float(random.randint(450,460))
+        self.walker_x_location = float(random.randint(480,490))
+        #print(self.walker_x_location)
+        #self.walker_x_location = 490.0
         self.transform_walk = carla.Transform(carla.Location(x=self.walker_x_location, y=-22, z= 5.0),carla.Rotation(yaw=-180))
+        '''
         if self.walker1 is not None:
             self.walker1.destroy()
+        '''
         self.walker1 = self.world.spawn_actor(walker_bp, self.transform_walk)
         print(f'Walker is {self.walker1}.')
 
@@ -397,21 +457,30 @@ class World(gym.Env):
         #print('rendering')
         self.camera_manager.render(display)
         self.hud.render(display)
-    '''    
-    def destroy(self):
-        
-         """Destroys all actors"""
-         #self.actors = [self.rgb_cam.sensor, self.player, self.car1]
-         print('destroying actors')
-         for actor in self.actor_list:
-             if actor is not None:
-                 actor.destroy()
-        #pygame.quit()
     '''
+    def store_rewards(self, reward_eff, reward_comfort, reward_break, reward_throt, reward_action, reward_em, done):
+        self.cumulative_reward += r_adas + r_v + r_lka + r_a_lon + r_a_lat
+        self.r_adas_cum += r_adas
+        self.r_v_cum += r_v
+        self.r_a_lon_cum += r_a_lon
+        self.r_a_lat_cum += r_a_lat
+        self.r_lka_cum += r_lka
+        if done:
+            self.r_adas_cum_callback = self.r_adas_cum
+            self.r_v_cum_callback = self.r_v_cum
+            self.r_a_lon_cum_callback = self.r_a_lon_cum
+            self.r_a_lat_cum_callback = self.r_a_lat_cum
+            self.r_lka_cum_callback = self.r_lka_cum
+            self.aver_r_callback = self.cumulative_reward / self.episode_t
+            self.print_info()
+            self.total_epis += 1
+    '''
+
     def destroy(self):
         """Destroys all actors"""
         sensors = [self.camera_manager, self.collision_sensor]
-        cars = [self.car1, self.car2, self.car3, self.car4,self.player,self.walker1]
+        #cars = [self.car1, self.car2, self.car3, self.car4,self.player,self.walker1]
+        cars = [self.player,self.walker1]
         for s in sensors:
             if s is not None:
                 s.sensor.destroy()
