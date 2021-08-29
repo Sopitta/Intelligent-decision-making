@@ -53,6 +53,18 @@ class TensorboardCallback(BaseCallback):
         self.locals['writer'].add_summary(summary, self.num_timesteps)
         return True
 '''       
+class TensorboardCallback(BaseCallback):
+    def __init__(self, env: str):
+        super(TensorboardCallback, self).__init__(0)
+        self.env = env
+    def _on_step(self) -> bool:
+        summary = tf.Summary(value=[tf.Summary.Value(tag='Reward_total', simple_value=self.env.reward_total)])
+        self.locals['writer'].add_summary(summary, self.num_timesteps)
+        summary = tf.Summary(value=[tf.Summary.Value(tag='Number of Emergency brake', simple_value=self.env.em_num)])
+        self.locals['writer'].add_summary(summary, self.num_timesteps)
+        summary = tf.Summary(value=[tf.Summary.Value(tag='Reward Goal', simple_value=self.env.reward_goal)])
+        self.locals['writer'].add_summary(summary, self.num_timesteps)
+        return True
 
 
 class World(gym.Env):    
@@ -64,11 +76,13 @@ class World(gym.Env):
         client.set_timeout(4.0)
 
         #initialize pygame
-        os.environ["SDL_VIDEODRIVER"] = "dummy" #use this to make pygame headless
+        #os.environ["SDL_VIDEODRIVER"] = "dummy" #use this to make pygame headless
         pygame.init()
         pygame.font.init()
         hud = HUD(1280, 720)
         self.world = client.load_world('Town06')
+        # Toggle all buildings off
+        #self.world.unload_map_layer(carla.MapLayer.Buildings)
         self.map = self.world.get_map()
 
 
@@ -126,6 +140,7 @@ class World(gym.Env):
         self.reward_break_total = 0
         self.reward_action_total = 0
         self.reward_em_total = 0
+        self.reward_goal = 0
         self.em_num = 0
         self.em_num_list = []
 
@@ -300,12 +315,14 @@ class World(gym.Env):
        
        
         # if action from RL leads to out of range or collision, activate the control signal from safe action module
+        self.reward_goal = 0
         goal = self.player.get_location().x <= (self.walker_x_location - RL_zone +15)
         if goal or self.total_step == 6000:
             done = True
             almost_goal = self.player.get_location().x - (self.walker_x_location - RL_zone +15) <= 2
             if goal or almost_goal  and self.em_num == 0:
-                reward = reward + 5000
+                self.reward_goal = 5000
+                reward = reward + self.reward_goal
                 
         
         self.reward_total = self.reward_total+reward
@@ -436,9 +453,9 @@ class World(gym.Env):
         #walker_bp = random.choice(self.world.get_blueprint_library().filter('walker'))
         walker_bp = self.world.get_blueprint_library().filter('walker')[3]
         #self.walker_x_location = float(random.randint(450,460))
-        self.walker_x_location = float(random.randint(480,490))
+        #self.walker_x_location = float(random.randint(480,490))
         #print(self.walker_x_location)
-        #self.walker_x_location = 490.0
+        self.walker_x_location = 490.0
         self.transform_walk = carla.Transform(carla.Location(x=self.walker_x_location, y=-22, z= 5.0),carla.Rotation(yaw=-180))
         '''
         if self.walker1 is not None:

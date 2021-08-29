@@ -9,12 +9,14 @@ from pygame.locals import KMOD_CTRL
 from pygame.locals import K_ESCAPE
 from pygame.locals import K_q
 import matplotlib.pyplot as plt
+import tensorflow as tf
 
 try:
     #sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
     #sys.path.append(glob.glob('D:/self-driving cars/simulator/CARLA_0.9.10.1/WindowsNoEditor/PythonAPI/carla/dist/carla-*%d.%d-%s.egg' % (
     #sys.path.append(glob.glob('Z:/Documents/Carla/CARLA_0.9.10/WindowsNoEditor/PythonAPI/carla/dist/carla-*%d.%d-%s.egg' % (
     sys.path.append(glob.glob('C:/School/Carla sim/CARLA_0.9.11/WindowsNoEditor/PythonAPI/carla/dist/carla-*%d.%d-%s.egg' % (
+    #sys.path.append(glob.glob('C:/School/Carla sim/CARLA_0.9.12/WindowsNoEditor/PythonAPI/carla/dist/carla-*%d.%d-%s.egg' % (
         sys.version_info.major,
         sys.version_info.minor,
         'win-amd64' if os.name == 'nt' else 'linux-x86_64'))[0])
@@ -23,8 +25,8 @@ except IndexError:
 
 import carla
 #from env import CarEnv, World, HUD
-#from Env.env_continuous_3 import World, HUD, TensorboardCallback
-from Env.env_continuous_3 import World, HUD
+from Env.env_continuous_3 import World, HUD, TensorboardCallback
+#from Env.env_continuous_3 import World, HUD
 #from agent.myagent import Agent
 from high_level_sc import HighLevelSC
 from stable_baselines.common.env_checker import check_env
@@ -63,38 +65,32 @@ def train_model(env_0, log_dir, log_name, train_num, model_name, train_time, loa
                            epsilon=1e-08)
     # Custom MLP policy of three layers of size 128 each with tanh activation function
     # policy_kwargs = dict(act_fun=tf.nn.tanh, net_arch=[128, 128, 128])
-    #lr_schedule = LinearSchedule(train_time, final_p=1e-5, initial_p=1e-4)
-    #lr_schedule = LinearSchedule(schedule_timesteps = train_time, final_p = 1e-5, initial_p=1.0)
     lr = ReduceSchedule(initial_p=1e-4)
-    #endpoints_1 = [(1000000,1e-4),(3000000,7.5e-5),(5000000,5e-5)]
-    #endpoints_2 = [(0, 1e-3),(10000,1e-4),(30000,1e-5)]
-    #lr = PiecewiseSchedule(endpoints = endpoints_2,interpolation=linear_interpolation,outside_value=1e-5)
     #use with lr_schedule.value
     policy_kwargs = dict(net_arch=[128, 128, 128])
+    #policy_kwargs = dict(act_fun=tf.nn.tanh, net_arch=[128, 128, 128])
     model = PPO2(policy=MlpPolicy, env=env, verbose=1, tensorboard_log=log_dir,
                  policy_kwargs=policy_kwargs,
                  gamma=0.99,            # discount factor [0.8 0.99] 0.99
-                 n_steps=16000,           #!! horizon [32 5000] [64 2048] 128 #8000
+                 n_steps=20000,           #!! horizon [32 5000] [64 2048] 128 #8000
                  ent_coef=0.01,          # entropy coefficient [0 0.001] 0.01
-                 learning_rate=2.5e-4,    #!! learning rate [1e-3 1e-6] 2.5e-4
+                 learning_rate=lr.value,    #!! learning rate [1e-3 1e-6] 2.5e-4
                  vf_coef=0.5,           # value function coefficient [0.5 1] 0.5
                  max_grad_norm=0.5,     # [] 0.5
                  lam=0.9,               # [0.9 1] 0.9
-                 nminibatches=50,        #!! minibatch [4 4096] con [512 5120], des [32 512] 4
-                 noptepochs=50,          #!! epoch [3 30] 4
+                 nminibatches=4,        #!! minibatch [4 4096] con [512 5120], des [32 512] 4 8
+                 noptepochs=4,          #!! epoch [3 30] 4 8
                  cliprange=0.2,          #!! clipping [0.1 0.3] 0.2
-                 seed= 540)         
-    #model.learn(total_timesteps=train_time, tb_log_name=log_name, callback=callback)
+                 seed= 580)         
     if load:
         #model.set_env(env)
         model = PPO2.load(model_name_prev)
         model.set_env(env)
-    #model.learn(total_timesteps=train_time, tb_log_name=log_name,callback=callback)
-    model.learn(total_timesteps=train_time, tb_log_name=log_name)
+    model.learn(total_timesteps=train_time, tb_log_name=log_name,callback=callback)
+    #model.learn(total_timesteps=train_time, tb_log_name=log_name)
     model.save(model_name)
     stats_path = os.path.join(log_dir, "vec_normalize_{}.pkl".format(train_num))
     env.save(stats_path)
-    #print("Done training, total episodes executed = {}".format(env_0.total_epis))
     print("Done training, total steps executed = {}".format(train_time))
     plt.plot(env_0.cum_r)
     plt.savefig('average_reward_'+str(train_num)+'.png')
@@ -143,9 +139,9 @@ def evaluate_model(env, model_name, eval_step, log_dir, train_num):
 # os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 def main():
-    train = True
+    train = False
     load = False
-    train_num = 54
+    train_num = 43
     method = 'ppo'
     continuous = True
     log_dir = "./{}/".format(method)
@@ -155,10 +151,10 @@ def main():
     env = World()
     if train:
         log_name = "log_{}_WalkerCross_{}".format(method, train_num)
-        steps = 12500000
+        steps = 1500000
         train_model(env, log_dir, log_name, train_num, model_name, steps, load = load)
     else:
-        steps = 20000
+        steps = 25000
         evaluate_model(env, model_name, steps, log_dir, train_num)
     #env.destroy_all()
     #env.quit_pygame()
