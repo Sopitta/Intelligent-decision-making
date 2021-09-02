@@ -1,4 +1,8 @@
 import numpy as np
-data = np.load('col_num_per_ep_25.npy')
+import matplotlib.pyplot as plt
+
+data = np.load('reward_action_per_ep_60.npy')
+plt.plot(data)
+plt.show()
 #print(np.max(data))
-print(data)
+#print(data)
