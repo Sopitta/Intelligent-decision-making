@@ -32,7 +32,7 @@ class RL(object):
 			#reward_speed = -6 * speed_kmh + 138
 			#reward_speed = 0
 			reward_speed = -2
-		
+		'''
 		if speed_kmh >= 0 and speed_kmh <1:
 			reward_speed = -1
 		elif speed_kmh >= 1 and speed_kmh <5:
@@ -74,6 +74,7 @@ class RL(object):
 		else:
 			reward_collision = 0
 		return reward_collision
+
 	def reset(self):
 		self.done = False
 		
