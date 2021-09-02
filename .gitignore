@@ -5,3 +5,5 @@ ppo/
 birdview_v2_cache/
 *.png
 *.xlsx
+Data/
+model_checkpoints/
