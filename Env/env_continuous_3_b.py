@@ -85,7 +85,7 @@ class World(gym.Env):
         client.set_timeout(4.0)
 
         #initialize pygame
-        #os.environ["SDL_VIDEODRIVER"] = "dummy" #use this to make pygame headless
+        os.environ["SDL_VIDEODRIVER"] = "dummy" #use this to make pygame headless
         pygame.init()
         pygame.font.init()
         hud = HUD(1280, 720)
@@ -306,7 +306,7 @@ class World(gym.Env):
        
         self.reward_goal = 0
         self.reward_time = 0
-        ep_length = 6300
+        ep_length = 6500
         goal = self.player.get_location().x <= (self.walker_x_location - RL_zone +15)
         if goal or self.total_step == ep_length: #5700
             done = True
@@ -321,7 +321,7 @@ class World(gym.Env):
         self.reward_total += reward
         self.reward_ts = reward
         
-        #print(done)
+        #print(self.total_step)
         if done == True:
             self.episode = self.episode + 1
             self.destroy()
@@ -434,8 +434,8 @@ class World(gym.Env):
     def spawn_walker(self):
         #walker_bp = random.choice(self.world.get_blueprint_library().filter('walker'))
         walker_bp = self.world.get_blueprint_library().filter('walker')[3]
-        self.walker_x_location = float(random.randint(485,490))
-        #self.walker_x_location = 490.0
+        #self.walker_x_location = float(random.randint(485,490))
+        self.walker_x_location = 490.0
         self.transform_walk = carla.Transform(carla.Location(x=self.walker_x_location, y=-22, z= 5.0),carla.Rotation(yaw=-180))
         if self.walker1 is not None:
             self.walker1.destroy()

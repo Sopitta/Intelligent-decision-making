@@ -61,7 +61,7 @@ def train_model(env_0, log_dir, log_name, train_num, model_name, train_time, loa
     model = PPO2(policy=MlpPolicy, env=env, verbose=1, tensorboard_log=log_dir,
                  policy_kwargs=policy_kwargs,
                  gamma=0.99,            # discount factor [0.8 0.99] 0.99
-                 n_steps=19000,           #!! horizon [32 5000] [64 2048] 128
+                 n_steps=20000,           #!! horizon [32 5000] [64 2048] 128
                  ent_coef=0.01,          # entropy coefficient [0 0.001] 0.01
                  learning_rate=lr.value,    #!! learning rate [1e-3 1e-6] 2.5e-4
                  vf_coef=0.5,           # value function coefficient [0.5 1] 0.5
@@ -70,7 +70,7 @@ def train_model(env_0, log_dir, log_name, train_num, model_name, train_time, loa
                  nminibatches=4,        #!! minibatch [4 4096] con [512 5120], des [32 512] 4
                  noptepochs=4,          #!! epoch [3 30] 4
                  cliprange=0.2,         #!! clipping [0.1 0.3] 0.2
-                 seed = 6600)           #6100 6200 6300 6400
+                 seed = 6700)           #6100 6200 6300 6400
     if load:
         model = PPO2.load(load_path = model_name_prev, env = env, tensorboard_log=log_dir,learning_rate=lr.value)
         #model.set_env(env)
@@ -134,9 +134,9 @@ def evaluate_model(env, model_name, eval_step, log_dir, train_num):
 # os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 def main():
-    train = False
+    train = True
     load = False
-    train_num = 66
+    train_num = 67
     method = 'ppo'
     continuous = True
     log_dir = "./{}/".format(method)
@@ -146,7 +146,7 @@ def main():
     env = World()
     if train:
         log_name = "log_{}_WalkerCross_{}".format(method, train_num)
-        steps = 10000000
+        steps = 3500000
         train_model(env, log_dir, log_name, train_num, model_name, steps, load = load)
     else:
         steps = 20000
