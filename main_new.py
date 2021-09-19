@@ -70,7 +70,7 @@ def train_model(env_0, log_dir, log_name, train_num, model_name, train_time, loa
                  nminibatches=4,        #!! minibatch [4 4096] con [512 5120], des [32 512] 4
                  noptepochs=4,          #!! epoch [3 30] 4
                  cliprange=0.2,         #!! clipping [0.1 0.3] 0.2
-                 seed = 7200)           #6100 6200 6300 6400
+                 seed = 7800)           #6100 6200 6300 6400
     if load:
         model = PPO2.load(load_path = model_name_prev, env = env, tensorboard_log=log_dir,learning_rate=lr.value)
         #model.set_env(env)
@@ -134,9 +134,9 @@ def evaluate_model(env, model_name, eval_step, log_dir, train_num):
 # os.environ["SDL_VIDEODRIVER"] = "dummy"
 
 def main():
-    train = False
+    train = True
     load = False
-    train_num = 72
+    train_num = 78
     method = 'ppo'
     continuous = True
     log_dir = "./{}/".format(method)

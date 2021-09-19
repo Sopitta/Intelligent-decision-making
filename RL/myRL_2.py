@@ -17,7 +17,7 @@ class RL(object):
 		
 		if speed_kmh >= 0 and speed_kmh <=1:
 			#reward_speed = 0
-			reward_speed = -1
+			reward_speed = -2
 		elif speed_kmh > 1 and speed_kmh <=3:
 			#reward_speed = 1
 			reward_speed = 2
@@ -34,7 +34,7 @@ class RL(object):
 			reward_speed = -2
 		'''
 		if speed_kmh >= 0 and speed_kmh <1:
-			reward_speed = -1
+			reward_speed = -2
 		elif speed_kmh >= 1 and speed_kmh <5:
 			reward_speed = (0.25*speed_kmh)-0.25
 		elif speed_kmh >= 5 and speed_kmh <=20:

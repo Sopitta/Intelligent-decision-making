@@ -230,7 +230,7 @@ class World(gym.Env):
         break_dist = safe_dist + the
         RL_zone = 30
 
-        if e_dist <= break_dist and self.walker1.get_location().y - self.player.get_location().y <= 3.2 :
+        if e_dist <= break_dist and self.walker1.get_location().y - self.player.get_location().y <= 3 : #3.2
 
             emergency_brake = True
             control_p = carla.VehicleControl()
@@ -263,9 +263,9 @@ class World(gym.Env):
         if emergency_brake or use_RL:
             
             if emergency_brake:
-                #reward_em = -25
+                reward_em = -25
                 #reward_em = -10
-                reward_em = -6
+                #reward_em = -6
                 if self.player.get_location().z < 0.005 and self.player.get_location().z > 0:
                     self.em_num = self.em_num + 1
             else:
@@ -304,10 +304,16 @@ class World(gym.Env):
         if goal or self.total_step == ep_length: #5700
             done = True
             almost_goal = self.player.get_location().x - (self.walker_x_location - RL_zone +15) <= 3 #old 2
+            '''
             if (goal or almost_goal)  and self.em_num == 0:
                 self.reward_goal = 5000
                 if self.total_step < ep_length:
-                    self.reward_time == (ep_length-self.total_step)+100
+                    self.reward_time = (ep_length-self.total_step)+100
+            '''
+            if (goal or almost_goal) :
+                self.reward_goal = 1000
+            if self.total_step < ep_length:
+                self.reward_time = 500
 
         reward += self.reward_goal 
         reward += self.reward_time

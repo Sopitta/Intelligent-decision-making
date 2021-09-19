@@ -94,7 +94,7 @@ class World(gym.Env):
 
 
         
-        self.action_space = spaces.Box(np.array([-1]), np.array([1]), dtype=np.float32 )  # throttle
+        self.action_space = spaces.Box(np.array([0]), np.array([1]), dtype=np.float32 )  # throttle
         self.observation_space = spaces.Box(
             low=-np.inf, 
             high=np.inf, 
@@ -162,6 +162,7 @@ class World(gym.Env):
         self.render(self.display)
         pygame.display.flip()
 
+        #action = (action+1)/2
         #print(action)
 
         #set this to false in order to see which action the agent execute.
@@ -248,12 +249,14 @@ class World(gym.Env):
                 control_p = carla.VehicleControl()
                 throt_RL = action[0]
                 #print('RL action ',throt_RL)
-                
+                control_p.throttle = float(throt_RL)
+                '''
                 if throt_RL >= 0:
                     control_p.throttle = float(throt_RL)
                 else:
                     control_p.brake = abs(float(throt_RL)) 
                     #print(control_p.brake)
+                '''
                 control_p.steer = control_s.steer #throttle from RL, steer from safety controller.
             else:
                 #use safety rule when not in range.
@@ -268,7 +271,9 @@ class World(gym.Env):
         if emergency_brake or use_RL:
             
             if emergency_brake:
-                reward_em = -25
+                #reward_em = -25
+                #reward_em = -10
+                reward_em = -15
                 if self.player.get_location().z < 0.005 and self.player.get_location().z > 0:
                     self.em_num = self.em_num + 1
             else:
